@@ -2,25 +2,35 @@ package com.SSarkar.Xplore.entity;
 
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
+@ToString
 @Entity
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = "username"),
-        @UniqueConstraint(columnNames = "email")
+        @UniqueConstraint(columnNames = "email"),
+        @UniqueConstraint(columnNames = "uuid")
 })
+@EqualsAndHashCode(of = "uuid")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // This is our new, stable business key 🔑
+    @Column(nullable = false, updatable = false)
+    private UUID uuid = UUID.randomUUID();
 
     @Column(nullable = false)
     private String username;
@@ -56,6 +66,5 @@ public class User {
         }
         this.userProfile = userProfile;
     }
-
 
 }
