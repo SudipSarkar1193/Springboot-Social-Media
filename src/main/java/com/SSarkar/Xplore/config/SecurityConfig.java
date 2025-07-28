@@ -2,6 +2,8 @@ package com.SSarkar.Xplore.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -31,5 +33,15 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    /** Why do Exposing this bean ??
+     We are Exposing this bean to allow Spring Security to use it for authentication.
+     This is necessary for the authentication process to work, especially when using
+     form-based login or when you need to authenticate users programmatically.
+    */
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 }
