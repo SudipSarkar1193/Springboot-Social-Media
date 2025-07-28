@@ -71,6 +71,9 @@ public class User implements UserDetails {
         this.userProfile = userProfile;
     }
 
+    @OneToMany(fetch = FetchType.LAZY,mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Post> posts ;
+
     // --- UserDetails methods---
 
     @Override
