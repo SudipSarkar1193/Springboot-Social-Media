@@ -191,10 +191,24 @@ public class PostServiceImpl implements PostService {
 
         dto.setCommentCount(commentList != null ? commentList.size() : 0);
 
+        // Check if we should process the comments
         if (recursionDepth > 0 && commentList != null && !commentList.isEmpty()) {
-            dto.setComments(commentList.stream()
-                    .map(comment -> mapPostToResponseDTO(comment, recursionDepth - 1))
-                    .collect(Collectors.toList()));
+
+            // 1. Create a new empty list to hold the comment DTOs
+            List<PostResponseDTO> commentDTOs = new ArrayList<>();
+
+            // 2. Loop through each 'Post' entity in the original comment list
+            for (Post comment : commentList) {
+
+                // 3. For each comment, map it to its DTO representation
+                PostResponseDTO commentDTO = mapPostToResponseDTO(comment, recursionDepth - 1);
+
+                // 4. Add the newly created DTO to our list
+                commentDTOs.add(commentDTO);
+            }
+
+            // 5. Finally, set the list of comment DTOs on the main post DTO
+            dto.setComments(commentDTOs);
         }
 
         return dto;
