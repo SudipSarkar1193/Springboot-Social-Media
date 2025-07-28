@@ -62,4 +62,13 @@ public class Post {
     @ToString.Exclude // Avoid recursion in toString()
     private User author;
 
+    public void setAuthor(User author) {
+        if (author == null) {
+            throw new IllegalArgumentException("Author cannot be null");
+        }
+        this.author = author;
+
+        author.getPosts().add(this);
+    }
+
 }

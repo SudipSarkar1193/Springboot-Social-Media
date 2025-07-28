@@ -74,6 +74,16 @@ public class User implements UserDetails {
     @OneToMany(fetch = FetchType.LAZY,mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Post> posts ;
 
+    public void addPost(Post post) {
+        posts.add(post);
+        post.setAuthor(this);
+    }
+
+    public void removePost(Post post) {
+        posts.remove(post);
+        post.setAuthor(null);
+    }
+
     // --- UserDetails methods---
 
     @Override
