@@ -1,6 +1,6 @@
 package com.SSarkar.Xplore.exception;
 
-import com.SSarkar.Xplore.dto.ErrorResponseDTO;
+import com.SSarkar.Xplore.dto.error.ErrorResponseDTO;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

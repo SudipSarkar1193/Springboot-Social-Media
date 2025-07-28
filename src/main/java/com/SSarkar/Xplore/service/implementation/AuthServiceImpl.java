@@ -1,9 +1,9 @@
 package com.SSarkar.Xplore.service.implementation;
 
-import com.SSarkar.Xplore.dto.AuthResponseDTO;
-import com.SSarkar.Xplore.dto.LoginRequestDTO;
-import com.SSarkar.Xplore.dto.UserRegistrationRequestDTO;
-import com.SSarkar.Xplore.dto.UserResponseDTO;
+import com.SSarkar.Xplore.dto.auth.AuthResponseDTO;
+import com.SSarkar.Xplore.dto.auth.LoginRequestDTO;
+import com.SSarkar.Xplore.dto.auth.UserRegistrationRequestDTO;
+import com.SSarkar.Xplore.dto.auth.UserResponseDTO;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.entity.UserProfile;
 import com.SSarkar.Xplore.repository.UserRepository;

@@ -1,6 +1,6 @@
 package com.SSarkar.Xplore.controller;
 
-import com.SSarkar.Xplore.dto.UserResponseDTO;
+import com.SSarkar.Xplore.dto.auth.UserResponseDTO;
 import com.SSarkar.Xplore.service.contract.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

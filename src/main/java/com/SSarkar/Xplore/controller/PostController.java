@@ -1,9 +1,9 @@
 package com.SSarkar.Xplore.controller;
 
-import com.SSarkar.Xplore.dto.CommentRequestDTO;
-import com.SSarkar.Xplore.dto.CreatePostRequestDTO;
-import com.SSarkar.Xplore.dto.PagedResponseDTO;
-import com.SSarkar.Xplore.dto.PostResponseDTO;
+import com.SSarkar.Xplore.dto.post.CommentRequestDTO;
+import com.SSarkar.Xplore.dto.post.CreatePostRequestDTO;
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
+import com.SSarkar.Xplore.dto.post.PostResponseDTO;
 import com.SSarkar.Xplore.service.contract.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

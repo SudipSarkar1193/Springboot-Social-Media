@@ -1,9 +1,9 @@
 package com.SSarkar.Xplore.service.implementation;
 
-import com.SSarkar.Xplore.dto.CommentRequestDTO;
-import com.SSarkar.Xplore.dto.CreatePostRequestDTO;
-import com.SSarkar.Xplore.dto.PagedResponseDTO;
-import com.SSarkar.Xplore.dto.PostResponseDTO;
+import com.SSarkar.Xplore.dto.post.CommentRequestDTO;
+import com.SSarkar.Xplore.dto.post.CreatePostRequestDTO;
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
+import com.SSarkar.Xplore.dto.post.PostResponseDTO;
 import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;

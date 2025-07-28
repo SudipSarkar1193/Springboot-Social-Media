@@ -1,4 +1,4 @@
-package com.SSarkar.Xplore.dto;
+package com.SSarkar.Xplore.dto.post;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -27,4 +27,7 @@ public class PostResponseDTO {
     private UUID parentPostUuid;
     private List<PostResponseDTO> comments; // A list of nested comments
     private int commentCount;
+
+    // --- NEW Fields for Likes ---
+    private int likeCount;
 }

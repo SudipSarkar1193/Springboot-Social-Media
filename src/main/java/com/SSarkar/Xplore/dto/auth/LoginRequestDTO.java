@@ -1,4 +1,4 @@
-package com.SSarkar.Xplore.dto;
+package com.SSarkar.Xplore.dto.auth;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

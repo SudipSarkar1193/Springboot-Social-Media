@@ -1,4 +1,4 @@
-package com.SSarkar.Xplore.dto;
+package com.SSarkar.Xplore.dto.post;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

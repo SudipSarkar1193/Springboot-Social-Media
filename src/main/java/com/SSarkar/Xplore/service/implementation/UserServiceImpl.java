@@ -1,6 +1,6 @@
 package com.SSarkar.Xplore.service.implementation;
 
-import com.SSarkar.Xplore.dto.UserResponseDTO;
+import com.SSarkar.Xplore.dto.auth.UserResponseDTO;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.UserService;

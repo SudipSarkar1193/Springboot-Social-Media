@@ -1,4 +1,4 @@
-package com.SSarkar.Xplore.dto;
+package com.SSarkar.Xplore.dto.auth;
 
 import lombok.Data;
 import java.util.UUID;
