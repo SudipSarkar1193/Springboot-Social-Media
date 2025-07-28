@@ -7,6 +7,7 @@ import com.SSarkar.Xplore.dto.post.PostResponseDTO;
 import com.SSarkar.Xplore.service.contract.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -15,11 +16,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
+@Slf4j
 public class PostController {
 
     private final PostService postService;
@@ -75,6 +78,19 @@ public class PostController {
             @AuthenticationPrincipal UserDetails currentUser) {
         postService.deletePost(uuid, currentUser);
         return ResponseEntity.noContent().build(); // HTTP 204 No Content is standard for successful deletions
+    }
+
+    @PostMapping("/{postUuid}/like")
+    public ResponseEntity<HashMap<String,String>> likePost(
+            @PathVariable UUID postUuid ,
+            @AuthenticationPrincipal UserDetails currentUser) {
+
+        log.debug("User {} is liking post with UUID: {}", currentUser.getUsername(), postUuid);
+
+        String msg = postService.likePost(postUuid, currentUser);
+        HashMap<String,String> map = new HashMap<>();
+        map.put("message",msg);
+        return ResponseEntity.ok(map);
     }
 
     @PostMapping("/{parentPostUuid}/comments")

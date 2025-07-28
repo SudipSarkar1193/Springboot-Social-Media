@@ -16,6 +16,6 @@ public interface PostService {
     void deletePost(UUID uuid, UserDetails currentUser);
     PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUser);
     PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable);
-    void likePost(UUID postUuid, UserDetails currentUser);
+    String likePost(UUID postUuid, UserDetails currentUser);
     void unlikePost(UUID postUuid, UserDetails currentUser);
 }

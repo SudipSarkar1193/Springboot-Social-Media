@@ -4,9 +4,11 @@ import com.SSarkar.Xplore.dto.post.CommentRequestDTO;
 import com.SSarkar.Xplore.dto.post.CreatePostRequestDTO;
 import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.post.PostResponseDTO;
+import com.SSarkar.Xplore.entity.Like;
 import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
+import com.SSarkar.Xplore.repository.LikeRepository;
 import com.SSarkar.Xplore.repository.PostRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.PostService;
@@ -32,6 +34,7 @@ public class PostServiceImpl implements PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final LikeRepository likeRepository;
 
     @Override
     @Transactional
@@ -170,6 +173,48 @@ public class PostServiceImpl implements PostService {
         log.info("Post with UUID: {} deleted successfully by user: {}", uuid, currentUsername);
     }
 
+    @Override
+    @Transactional
+    public String likePost(UUID postUuid, UserDetails currentUserDetails) {
+        // 1. Find the user and the post
+        User user = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Post post = postRepository.findByUuid(postUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + postUuid));
+
+        // 2. Check if the user has already liked the post
+        if (likeRepository.findByUserAndPost(user, post).isPresent()) {
+            unlikePost(postUuid, currentUserDetails);
+            log.info("User {} unliked post {}", user.getUsername(), postUuid);
+            return "Unliked the post";
+
+        }
+
+        // 3. Create and save the new Like entity
+        Like newLike = new Like(user, post);
+        likeRepository.save(newLike);
+        log.info("User {} liked post {}", user.getUsername(), postUuid);
+        return "Liked the post";
+    }
+
+    @Override
+    @Transactional
+    public void unlikePost(UUID postUuid, UserDetails currentUserDetails) {
+        // 1. Find the user and the post
+        User user = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Post post = postRepository.findByUuid(postUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + postUuid));
+
+        // 2. Find the specific "like" to remove
+        Like like = likeRepository.findByUserAndPost(user, post)
+                .orElseThrow(() -> new ResourceNotFoundException("Like not found for this user and post"));
+
+        // 3. Delete the like
+        likeRepository.delete(like);
+        log.info("User {} unliked post {}", user.getUsername(), postUuid);
+    }
+
     // --- Helper Method ---
     private PostResponseDTO mapPostToResponseDTO(Post post, int recursionDepth) {
         if (post == null) return null;
@@ -182,6 +227,8 @@ public class PostServiceImpl implements PostService {
         dto.setImageUrls(post.getImageUrls());
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
+
+        dto.setLikeCount(postRepository.countLikesByPost(post));
 
         if (post.getParentPost() != null) {
             dto.setParentPostUuid(post.getParentPost().getUuid());
