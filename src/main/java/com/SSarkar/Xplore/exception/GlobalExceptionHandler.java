@@ -2,6 +2,7 @@ package com.SSarkar.Xplore.exception;
 
 import com.SSarkar.Xplore.dto.ErrorResponseDTO;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -12,6 +13,7 @@ import org.springframework.web.context.request.WebRequest;
 import java.time.LocalDateTime;
 
 @ControllerAdvice // This annotation makes it a global exception handler
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -37,5 +39,22 @@ public class GlobalExceptionHandler {
                 ex.getMessage() // We use the specific message from the exception
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+
+    /**
+     * Handles exceptions thrown when an illegal argument is passed to a method.
+     * This could be due to invalid input data, such as a malformed UUID.
+     */
+    public ResponseEntity<ErrorResponseDTO> handleIllegalArgumentException(Exception ex, WebRequest request) {
+        log.debug("Handling IllegalArgumentException: {}", ex.getMessage());
+        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                ex.getMessage() // We use the specific message from the exception
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

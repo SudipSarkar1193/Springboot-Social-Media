@@ -1,6 +1,7 @@
 package com.SSarkar.Xplore.service.implementation;
 
 import com.SSarkar.Xplore.dto.CreatePostRequestDTO;
+import com.SSarkar.Xplore.dto.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.PostResponseDTO;
 import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.entity.User;
@@ -17,6 +18,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,33 +31,67 @@ public class PostServiceImpl implements PostService {
     private final UserRepository userRepository;
 
     @Override
-    @Transactional // Ensuring the entire method runs in a single database transaction.
+    @Transactional
     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
-        // 1. Find the author User entity from the database
+        // 1. Find the author User entity
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
 
-        // 2. Create and save the new Post entity
+        // 2. Create the new Post entity
         Post newPost = new Post();
         newPost.setContent(createPostRequest.getContent());
-        newPost.setAuthor(author); // Link the post to the user
-        newPost.setImageUrls(createPostRequest.getImageUrls());
 
+        // Check if there are image URLs and set them
+        if (createPostRequest.getImageUrls() != null) {
+            newPost.setImageUrls(createPostRequest.getImageUrls());
+        }
+
+        // 3. Use the helper method on the parent (User) to establish the link
+        author.addPost(newPost); // This syncs both sides of the relationship!
+
+        // 4. Save the new Post
+        // We save the 'child' side. Cascade settings will handle the rest.
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
 
-        // 3. Map the saved entity to a response DTO
+        // 5. Map and return the DTO
         return mapPostToResponseDTO(savedPost);
     }
 
     @Override
-    @Transactional(readOnly = true) // readOnly=true is an optimization for select queries
-    public Page<PostResponseDTO> getAllPosts(Pageable pageable) {
-        // Find all posts, respecting the pagination and sorting from the Pageable parameter
+    @Transactional(readOnly = true)
+    public PagedResponseDTO<PostResponseDTO> getAllPosts(Pageable pageable) {
+        // This is the most important part: a single, efficient query!
         Page<Post> postPage = postRepository.findAll(pageable);
         log.debug("Fetched {} posts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
-        // Map the page of entities to a page of DTOs
-        return postPage.map(this::mapPostToResponseDTO);
+
+        List<PostResponseDTO> postResponseDTOList = new ArrayList<>();
+
+        // The for-loop is 100% acceptable.
+        for (Post post : postPage.getContent()) {
+            // Because of @EntityGraph, these calls do NOT trigger extra queries.
+            String authorUsername = post.getAuthor().getUsername();
+            UUID authorUuid = post.getAuthor().getUuid();
+
+            PostResponseDTO postResp = new PostResponseDTO(
+                    post.getUuid(),
+                    post.getContent(),
+                    post.getImageUrls(),
+                    post.getCreatedAt(),
+                    post.getUpdatedAt(),
+                    authorUsername,
+                    authorUuid
+            );
+            postResponseDTOList.add(postResp);
+        }
+
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postPage.getNumber(),
+                postPage.getTotalPages(),
+                postPage.getTotalElements(),
+                postPage.isLast()
+        );
     }
 
     @Override

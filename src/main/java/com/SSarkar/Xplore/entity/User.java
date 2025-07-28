@@ -12,6 +12,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -71,8 +72,10 @@ public class User implements UserDetails {
         this.userProfile = userProfile;
     }
 
-    @OneToMany(fetch = FetchType.LAZY,mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Post> posts ;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude // Good practice to avoid recursion in logs
+    private List<Post> posts = new ArrayList<>();
 
     public void addPost(Post post) {
         posts.add(post);

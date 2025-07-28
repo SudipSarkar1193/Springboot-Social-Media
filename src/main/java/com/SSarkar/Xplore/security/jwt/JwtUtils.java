@@ -41,7 +41,9 @@ public class JwtUtils {
             return bearerToken.substring(7); // Remove "Bearer " prefix
         }
         logger.warn("JWT not found or is not a Bearer token in Authorization header.");
-        return null;
+
+        return null; // Return null if no valid JWT is found
+
     }
 
     /**

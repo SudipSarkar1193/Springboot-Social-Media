@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,7 +32,10 @@ public class Post {
     private String content;
 
     @Column(columnDefinition = "TEXT")
-    private List<String> imageUrls;
+    @ElementCollection(fetch = FetchType.EAGER)
+    private List<String> imageUrls = new ArrayList<>();;
+
+
 
     @CreationTimestamp
     private Instant createdAt;
@@ -67,8 +71,6 @@ public class Post {
             throw new IllegalArgumentException("Author cannot be null");
         }
         this.author = author;
-
-        author.getPosts().add(this);
     }
 
 }

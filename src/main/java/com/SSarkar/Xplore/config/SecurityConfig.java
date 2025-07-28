@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.config;
 
+import com.SSarkar.Xplore.security.AuthEntryPoint;
 import com.SSarkar.Xplore.security.jwt.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,8 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    private final AuthEntryPoint unauthorizedHandler;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -30,7 +33,10 @@ public class SecurityConfig {
                 // 1. Disable CSRF protection for stateless REST APIs
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // 2. Define authorization rules
+                // 2. exception handling for unauthorized access
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+
+                // 3. Define authorization rules
                 .authorizeHttpRequests(authorize -> authorize
                         // Allow all requests to /api/auth/** (e.g., /register, /login)
                         .requestMatchers("/api/auth/**").permitAll()
