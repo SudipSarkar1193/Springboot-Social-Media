@@ -25,4 +25,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
+
+    // This method will return an Optional<User> that matches either the username or email.
+    // If a user with the given username or email exists, it will return an Optional containing the User; otherwise, it will return an empty Optional.
+
+    Optional<User> findByUsernameOrEmail(String usernameOrEmail);
 }
