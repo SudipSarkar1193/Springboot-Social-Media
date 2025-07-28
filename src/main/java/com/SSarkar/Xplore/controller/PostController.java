@@ -85,4 +85,12 @@ public class PostController {
         PostResponseDTO newComment = postService.addCommentToPost(parentPostUuid, commentRequest, currentUser);
         return new ResponseEntity<>(newComment, HttpStatus.CREATED);
     }
+
+    @GetMapping("/feed")
+    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
+            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+
+        PagedResponseDTO<PostResponseDTO> posts = postService.getAllTopLevelPosts(pageable);
+        return ResponseEntity.ok(posts);
+    }
 }

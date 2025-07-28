@@ -26,4 +26,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Override
     @EntityGraph(attributePaths = {"author"})
     Page<Post> findAll(@NonNull Pageable pageable);
+
+
+    /**
+     * Finds a paginated list of all posts where the parentPost is null.
+     * This is how we get only top-level posts, not comments.
+     * We also use the @EntityGraph here to prevent the N+1 problem for the author.
+     */
+    @EntityGraph(attributePaths = {"author"})
+    Page<Post> findAllByParentPostIsNull(Pageable pageable);
 }

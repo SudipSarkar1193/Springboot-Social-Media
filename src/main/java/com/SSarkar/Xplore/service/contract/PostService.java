@@ -15,4 +15,5 @@ public interface PostService {
     PostResponseDTO getPostByUuid(UUID uuid);
     void deletePost(UUID uuid, UserDetails currentUser);
     PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUser);
+    PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable);
 }

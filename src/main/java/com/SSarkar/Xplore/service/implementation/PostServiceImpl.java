@@ -122,6 +122,28 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
+    public PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable) {
+        // 1. Call our new, specific repository method
+        Page<Post> postPage = postRepository.findAllByParentPostIsNull(pageable);
+        log.debug("Fetched {} top-level posts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
+
+        // 2. Map the results to DTOs (using our existing helper method)
+        List<PostResponseDTO> postResponseDTOList = postPage.getContent().stream()
+                .map(post -> mapPostToResponseDTO(post, 1)) // Recursion depth is 0 for a feed
+                .collect(Collectors.toList());
+
+        // 3. Return the standard paged response
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postPage.getNumber(),
+                postPage.getTotalPages(),
+                postPage.getTotalElements(),
+                postPage.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PostResponseDTO getPostByUuid(UUID uuid) {
         Post post = postRepository.findByUuid(uuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid)); // Replace with a proper exception
