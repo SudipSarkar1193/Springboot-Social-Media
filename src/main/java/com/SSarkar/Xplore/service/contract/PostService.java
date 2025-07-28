@@ -1,9 +1,9 @@
 package com.SSarkar.Xplore.service.contract;
 
+import com.SSarkar.Xplore.dto.CommentRequestDTO;
 import com.SSarkar.Xplore.dto.CreatePostRequestDTO;
 import com.SSarkar.Xplore.dto.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.PostResponseDTO;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -14,4 +14,5 @@ public interface PostService {
     PagedResponseDTO<PostResponseDTO> getAllPosts(Pageable pageable);
     PostResponseDTO getPostByUuid(UUID uuid);
     void deletePost(UUID uuid, UserDetails currentUser);
+    PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUser);
 }

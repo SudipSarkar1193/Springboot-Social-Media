@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.controller;
 
+import com.SSarkar.Xplore.dto.CommentRequestDTO;
 import com.SSarkar.Xplore.dto.CreatePostRequestDTO;
 import com.SSarkar.Xplore.dto.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.PostResponseDTO;
@@ -74,5 +75,14 @@ public class PostController {
             @AuthenticationPrincipal UserDetails currentUser) {
         postService.deletePost(uuid, currentUser);
         return ResponseEntity.noContent().build(); // HTTP 204 No Content is standard for successful deletions
+    }
+
+    @PostMapping("/{parentPostUuid}/comments")
+    public ResponseEntity<PostResponseDTO> createComment(
+            @PathVariable UUID parentPostUuid,
+            @Valid @RequestBody CommentRequestDTO commentRequest,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        PostResponseDTO newComment = postService.addCommentToPost(parentPostUuid, commentRequest, currentUser);
+        return new ResponseEntity<>(newComment, HttpStatus.CREATED);
     }
 }
