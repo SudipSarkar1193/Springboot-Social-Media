@@ -31,11 +31,10 @@ public class Post {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(columnDefinition = "TEXT")
     @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "post_image_urls", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private List<String> imageUrls = new ArrayList<>();;
-
-
 
     @CreationTimestamp
     private Instant createdAt;
@@ -45,32 +44,44 @@ public class Post {
 
     // --- Relationships ---
 
-    /**
-     * Interview Insight: @ManyToOne with FetchType.LAZY
-     * ----------------------------------------------------
-     * This is the OWNING side of the relationship. Many posts can belong to one user.
-     *
-     * FetchType.LAZY: This is a critical performance optimization. It means that when you
-     * load a Post from the database, the associated User object WILL NOT be loaded at the
-     * same time. It will only be fetched from the database when you explicitly access it
-     * (e.g., by calling post.getAuthor()).
-     *
-     * Why is this important? Imagine fetching 100 posts for a news feed. With EAGER fetching,
-     * you would execute 101 queries (1 for the posts, and 100 more for each user). With LAZY,
-     * you only execute 1 query for the posts. This prevents the "N+1 select problem".
-     *
-     * JoinColumn: Specifies the foreign key column in the 'posts' table, which we'll name 'author_id'.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
-    @ToString.Exclude // Avoid recursion in toString()
+    @ToString.Exclude
     private User author;
 
-    public void setAuthor(User author) {
-        if (author == null) {
-            throw new IllegalArgumentException("Author cannot be null");
-        }
-        this.author = author;
+    // --- NEW: Recursive Relationship ---
+
+    /**
+     * This is the parent post that this post is a comment on.
+     * It's a Many-to-One relationship because many comments (posts) can belong to one parent post.
+     * It can be null if the post is a top-level post, not a comment.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_post_id") // The foreign key column in the 'posts' table
+    @ToString.Exclude
+    private Post parentPost;
+
+    /**
+     * This is the list of comments on this post.
+     * It's a One-to-Many relationship because one post can have many comments (which are also posts).
+     * `mappedBy = "parentPost"` tells JPA that the `parentPost` field in the child `Post` entity owns this relationship.
+     * `cascade = CascadeType.ALL` means if we delete a post, all its comments are also deleted.
+     * `orphanRemoval = true` ensures that if a comment is removed from this list, it's also deleted from the database.
+     */
+    @OneToMany(mappedBy = "parentPost", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<Post> comments = new ArrayList<>();
+
+
+    // --- Helper Methods for Bidirectional Consistency ---
+
+    public void addComment(Post comment) {
+        comments.add(comment);
+        comment.setParentPost(this);
     }
 
+    public void removeComment(Post comment) {
+        comments.remove(comment);
+        comment.setParentPost(null);
+    }
 }
