@@ -2,6 +2,8 @@ package com.SSarkar.Xplore.repository;
 
 import com.SSarkar.Xplore.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -29,5 +31,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // This method will return an Optional<User> that matches either the username or email.
     // If a user with the given username or email exists, it will return an Optional containing the User; otherwise, it will return an empty Optional.
 
-    Optional<User> findByUsernameOrEmail(String usernameOrEmail);
+    /**
+     * This is the correct approach for a login system.
+     * It finds a user where EITHER the username OR the email matches the single
+     * input string provided from the login form.
+     */
+    @Query("SELECT u FROM User u WHERE u.username = :login OR u.email = :login")
+    Optional<User> findByUsernameOrEmail(@Param("login") String login);
+
 }

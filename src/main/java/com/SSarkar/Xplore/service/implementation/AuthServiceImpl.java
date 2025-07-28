@@ -85,26 +85,31 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    // Assuming this method is in your AuthService or AuthController
     public AuthResponseDTO loginUser(LoginRequestDTO loginRequest) {
 
-        log.debug("Attempting login for user: {}", loginRequest.getUsername());
+        // CHANGE HERE 👇
+        log.debug("Attempting login for user: {}", loginRequest.getUsernameOrEmail());
 
         // 1. Create Authentication object using UsernamePasswordAuthenticationToken
+        //    Spring Security will pass the first argument (the principal) to your UserDetailsServiceImpl.
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                loginRequest.getUsername(),
+                loginRequest.getUsernameOrEmail(), // CHANGE HERE 👇
                 loginRequest.getPassword()
         );
+
         // 2. Authenticate the user using Spring Security's AuthenticationManager
         Authentication authentication = authenticationManager.authenticate(authenticationToken);
 
-        log.debug("Authentication successful for user: {}", loginRequest.getUsername());
+        // CHANGE HERE 👇
+        log.debug("Authentication successful for user: {}", loginRequest.getUsernameOrEmail());
 
         // 3. Set the authentication object in the SecurityContext
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        log.debug("Security context updated for user: {}", loginRequest.getUsername());
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal(); // Get the authenticated user
+        log.debug("Security context updated for user: {}", userDetails.getUsername());
 
-        // 3. Generate the JWT
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        // 4. Generate the JWT
         String jwt = jwtUtils.generateTokenFromUsername(userDetails);
         log.info("JWT generated for user: {}", userDetails.getUsername());
 
