@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL) // Don't include null fields in the JSON response
 public class PostResponseDTO {
 
     private UUID postUuid;
@@ -21,4 +23,8 @@ public class PostResponseDTO {
     private String authorUsername;
     private UUID authorUuid;
 
+    // --- NEW Fields for Comments ---
+    private UUID parentPostUuid;
+    private List<PostResponseDTO> comments; // A list of nested comments
+    private int commentCount;
 }
