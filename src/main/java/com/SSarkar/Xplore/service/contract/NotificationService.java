@@ -14,4 +14,6 @@ public interface NotificationService {
     void createNotification(User sender, User recipient, NotificationType type, UUID relatedEntityUuid);
 
     PagedResponseDTO<NotificationResponseDTO> getNotificationsForUser(UserDetails currentUserDetails, Pageable pageable);
+
+    long getUnreadNotificationCount(UserDetails currentUserDetails);
 }

@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -41,50 +41,56 @@ public class NotificationServiceImpl implements NotificationService {
         Notification notification = new Notification(recipient, sender, type, relatedEntityUuid);
         notificationRepository.save(notification);
         log.info("Saved notification of type {} for recipient {} from sender {}", type, recipient.getUsername(), sender.getUsername());
-
     }
-
 
 
     @Override
     @Transactional
     public PagedResponseDTO<NotificationResponseDTO> getNotificationsForUser(UserDetails currentUserDetails, Pageable pageable) {
-        User recipient = userRepository.findByUsername(currentUserDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + currentUserDetails.getUsername()));
+        User recipient = findUserByDetails(currentUserDetails);
 
         Page<Notification> notificationPage = notificationRepository.findByRecipientOrderByCreatedAtDesc(recipient, pageable);
-        List<Notification> notificationsOnPage = notificationPage.getContent();
 
-        // If no notifications are found, return an empty response
-        List<NotificationResponseDTO> notificationDTOList = new ArrayList<>();
-
-        // Map each Notification entity to NotificationResponseDTO
-        for (Notification notification : notificationsOnPage) {
-            notificationDTOList.add(mapEntityToDto(notification));
-        }
-
-        // Collecting unread notification IDs
-        // This is done to mark them as read later
+        List<NotificationResponseDTO> notificationDTOs = new ArrayList<>();
         List<Long> unreadNotificationIds = new ArrayList<>();
-        for (Notification notification : notificationsOnPage) {
+
+        // OPTIMIZATION: Process notifications in a single loop (O(N) complexity).
+        notificationPage.getContent().forEach(notification -> {
+
+            // 1. Map the entity to its DTO.
+            notificationDTOs.add(mapEntityToDto(notification));
+            // 2. Collect IDs of unread notifications to mark them as read.
             if (!notification.isRead()) {
                 unreadNotificationIds.add(notification.getId());
             }
-        }
+        });
 
-        // Mark notifications as read if there are any unread ones
+        // Perform a single bulk update query if there are unread notifications.
         if (!unreadNotificationIds.isEmpty()) {
             notificationRepository.markAsRead(recipient, unreadNotificationIds);
             log.info("Marked {} notifications as read for user {}", unreadNotificationIds.size(), recipient.getUsername());
         }
 
         return new PagedResponseDTO<>(
-                notificationDTOList,
+                notificationDTOs,
                 notificationPage.getNumber(),
                 notificationPage.getTotalPages(),
                 notificationPage.getTotalElements(),
                 notificationPage.isLast()
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true) // This is a read-only operation, which can be a performance hint for the DB.
+    public long getUnreadNotificationCount(UserDetails currentUserDetails) {
+        User recipient = findUserByDetails(currentUserDetails);
+        return notificationRepository.countByRecipientAndIsReadFalse(recipient);
+    }
+
+    // -- HELPER methos ---
+    private User findUserByDetails(UserDetails userDetails) {
+        return userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + userDetails.getUsername()));
     }
 
     private NotificationResponseDTO mapEntityToDto(Notification notification) {
@@ -95,7 +101,6 @@ public class NotificationServiceImpl implements NotificationService {
         dto.setCreatedAt(notification.getCreatedAt());
         dto.setRelatedEntityUuid(notification.getRelatedEntityUuid());
 
-
         if (notification.getSender() != null) {
             dto.setSenderUuid(notification.getSender().getUuid());
             dto.setSenderUsername(notification.getSender().getUsername());
@@ -103,10 +108,7 @@ public class NotificationServiceImpl implements NotificationService {
                 dto.setSenderProfilePictureUrl(notification.getSender().getUserProfile().getProfilePictureUrl());
             }
         }
-
-        // Generate a human-readable message
         dto.setMessage(generateMessage(notification));
-
         return dto;
     }
 

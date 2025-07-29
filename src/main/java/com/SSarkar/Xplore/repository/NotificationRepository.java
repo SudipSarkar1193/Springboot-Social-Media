@@ -32,4 +32,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.recipient = :recipient AND n.id IN :notificationIds")
     void markAsRead(@Param("recipient") User recipient, @Param("notificationIds") List<Long> notificationIds);
+
+
+    /**
+     * Counts only the unread notifications for a specific user.
+     * Used for the notification badge count.
+     */
+    long countByRecipientAndIsReadFalse(User recipient);
 }
