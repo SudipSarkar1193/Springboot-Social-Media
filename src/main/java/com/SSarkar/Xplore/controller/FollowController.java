@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.controller;
 
+import com.SSarkar.Xplore.dto.follow.FollowerDTO;
 import com.SSarkar.Xplore.service.contract.FollowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -24,6 +26,16 @@ public class FollowController {
         HashMap<String,String> map = new HashMap<>();
         map.put("message",msg);
         return ResponseEntity.ok(map);
+    }
+
+    @GetMapping("/followers")
+    public ResponseEntity<List<FollowerDTO>> getFollowers(@PathVariable UUID uuid) {
+        return ResponseEntity.ok(followService.getFollowers(uuid));
+    }
+
+    @GetMapping("/following")
+    public ResponseEntity<List<FollowerDTO>> getFollowing(@PathVariable UUID uuid) {
+        return ResponseEntity.ok(followService.getFollowing(uuid));
     }
 
 }
