@@ -22,11 +22,13 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByUsername(currentUser.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        // Map the User entity to your UserResponseDTO
+        // Map the User entity to our UserResponseDTO
         UserResponseDTO userResponse = new UserResponseDTO();
         userResponse.setUuid(user.getUuid());
         userResponse.setUsername(user.getUsername());
         userResponse.setEmail(user.getEmail());
+        userResponse.setFollowersCount(user.getFollowers().size());
+        userResponse.setFollowingCount(user.getFollowing().size());
 
         if (user.getUserProfile() != null) {
             userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
