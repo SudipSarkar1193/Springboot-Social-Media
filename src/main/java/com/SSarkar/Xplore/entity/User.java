@@ -87,6 +87,15 @@ public class User implements UserDetails {
         post.setAuthor(null);
     }
 
+
+    @OneToMany(mappedBy = "followee", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Follow> followers = new ArrayList<>();
+
+    @OneToMany(mappedBy = "follower", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Follow> following = new ArrayList<>();
+
     // --- UserDetails methods---
 
     @Override
