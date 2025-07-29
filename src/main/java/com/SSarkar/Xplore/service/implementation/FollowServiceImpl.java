@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.service.implementation;
 
+import com.SSarkar.Xplore.dto.follow.FollowerDTO;
 import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
@@ -12,6 +13,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -72,5 +75,51 @@ public class FollowServiceImpl implements FollowService {
 
         log.info("User {} has unfollowed {}", follower.getUsername(), followee.getUsername());
 
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FollowerDTO> getFollowers(UUID userUuid) {
+        User user = (User)userRepository.findByUuid(userUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
+
+        // Create a new list to hold our DTOs
+        List<FollowerDTO> followersList = new ArrayList<>();
+
+        // Loop through each 'Follow' relationship in the user's followers list
+        for (Follow follow : user.getFollowers()) {
+            User followerUser = follow.getFollower();
+            String profilePictureUrl = (followerUser.getUserProfile() != null) ?
+                    followerUser.getUserProfile().getProfilePictureUrl() : null;
+
+            // Create a new DTO and add it to our list
+            followersList.add(new FollowerDTO(followerUser.getUuid(), followerUser.getUsername(), profilePictureUrl));
+        }
+
+        return followersList;
+    }
+
+
+    @Override
+    public List<FollowerDTO> getFollowing(UUID userUuid) {
+        User user = (User) userRepository.findByUuid(userUuid)
+                .orElseThrow(()-> new ResourceNotFoundException("User not found with UUID: " + userUuid));
+
+        // Create a new list to hold our DTOs
+        List<FollowerDTO> followingList = new ArrayList<>();
+
+        // Loop through each 'Follow' relationship in the user's following list
+        for(Follow follow : user.getFollowing()){
+            User followeeUser = follow.getFollowee();
+            String profilePictureUrl = (followeeUser.getUserProfile() != null) ?
+                    followeeUser.getUserProfile().getProfilePictureUrl() : null;
+
+            // Create a new DTO and add it to our list
+            followingList.add(
+                    new FollowerDTO(followeeUser.getUuid(), followeeUser.getUsername(), profilePictureUrl)
+            );
+        }
+
+        return  followingList;
     }
 }
