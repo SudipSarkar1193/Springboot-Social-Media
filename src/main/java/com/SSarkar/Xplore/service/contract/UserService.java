@@ -5,4 +5,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 public interface UserService {
     UserResponseDTO getCurrentUserDetails(UserDetails userDetails);
+
+    UserResponseDTO getUserDetailsByUsername(String username);
 }

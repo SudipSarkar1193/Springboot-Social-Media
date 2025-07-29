@@ -25,6 +25,8 @@ public class UserProfile {
 
     private String profilePictureUrl;
 
+    private String fullName;
+
     @CreationTimestamp
     private Instant createdAt;
 

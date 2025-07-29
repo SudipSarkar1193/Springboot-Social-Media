@@ -19,7 +19,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDTO getCurrentUserDetails(UserDetails currentUser) {
-        User user = userRepository.findByUsername(currentUser.getUsername())
+        try{
+            return getUserDetailsByUsername(currentUser.getUsername());
+        }catch(UsernameNotFoundException e){
+            throw e;
+        }
+    }
+
+    @Override
+    public UserResponseDTO getUserDetailsByUsername(String username) {
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         // Map the User entity to our UserResponseDTO

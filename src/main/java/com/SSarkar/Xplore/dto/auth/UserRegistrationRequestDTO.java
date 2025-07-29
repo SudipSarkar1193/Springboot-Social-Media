@@ -15,6 +15,8 @@ public class UserRegistrationRequestDTO {
     @Size(min = 3, max = 20, message = "Username must be between 3 and 20 characters")
     private String username;
 
+    private String fullName ;
+
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Please provide a valid email address")
     private String email;
