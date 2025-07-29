@@ -1,4 +1,4 @@
-package com.SSarkar.Xplore.dto.auth;
+package com.SSarkar.Xplore.dto.user;
 
 import lombok.Data;
 import java.util.UUID;
@@ -10,5 +10,7 @@ public class UserResponseDTO {
     private String username;
     private String email;
     private String profilePictureUrl;
+    private int followersCount;
+    private int followingCount;
 
 }
