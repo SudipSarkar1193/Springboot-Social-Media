@@ -3,10 +3,12 @@ package com.SSarkar.Xplore.service.implementation;
 import com.SSarkar.Xplore.dto.follow.FollowerDTO;
 import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
+import com.SSarkar.Xplore.entity.enums.NotificationType;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
 import com.SSarkar.Xplore.repository.FollowRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.FollowService;
+import com.SSarkar.Xplore.service.contract.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,6 +27,7 @@ public class FollowServiceImpl implements FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository ;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -52,6 +55,8 @@ public class FollowServiceImpl implements FollowService {
         followRepository.save(follow);
 
         log.info("User {} started following {}", follower.getUsername(), followee.getUsername());
+
+        notificationService.createNotification(follower, followee, NotificationType.NEW_FOLLOWER, follower.getUuid());
 
         return "You are now following " + followee.getUsername();
     }

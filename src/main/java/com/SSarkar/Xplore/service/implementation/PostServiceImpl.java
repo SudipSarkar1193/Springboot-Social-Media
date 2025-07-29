@@ -7,10 +7,12 @@ import com.SSarkar.Xplore.dto.post.PostResponseDTO;
 import com.SSarkar.Xplore.entity.Like;
 import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.entity.User;
+import com.SSarkar.Xplore.entity.enums.NotificationType;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
 import com.SSarkar.Xplore.repository.LikeRepository;
 import com.SSarkar.Xplore.repository.PostRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
+import com.SSarkar.Xplore.service.contract.NotificationService;
 import com.SSarkar.Xplore.service.contract.PostService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,7 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -93,7 +96,10 @@ public class PostServiceImpl implements PostService {
         postRepository.save(parentPost);
         log.info("New comment with UUID: {} added to post with UUID: {}", comment.getUuid(), parentPost.getUuid());
 
-        // 7. Map and return the DTO for the newly created comment
+        // 7. CREATE NOTIFICATION
+        notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
+
+        // 8. Map and return the DTO for the newly created comment
         return mapPostToResponseDTO(comment, 0); // Recursion depth starts at 0
     }
 
@@ -194,6 +200,11 @@ public class PostServiceImpl implements PostService {
         Like newLike = new Like(user, post);
         likeRepository.save(newLike);
         log.info("User {} liked post {}", user.getUsername(), postUuid);
+
+        // 4. CREATE NOTIFICATION
+        notificationService.createNotification(user, post.getAuthor(), NotificationType.POST_LIKE, post.getUuid());
+
+
         return "Liked the post";
     }
 
