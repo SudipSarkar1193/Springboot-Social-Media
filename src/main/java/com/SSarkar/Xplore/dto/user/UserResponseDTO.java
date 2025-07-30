@@ -12,6 +12,7 @@ public class UserResponseDTO {
     private String profilePictureUrl;
     private int followersCount;
     private int followingCount;
+    private int postCount;
     private String fullName;
     private String bio ;
 

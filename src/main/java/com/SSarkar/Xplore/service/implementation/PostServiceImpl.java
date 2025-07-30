@@ -152,6 +152,34 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public PagedResponseDTO<PostResponseDTO> getPostsByUser(String username, Pageable pageable) {
+        User author = userRepository.findByUsername(username).orElseThrow(()->new ResourceNotFoundException("User not found"));
+
+        log.debug("Fetched author {}",author);
+
+
+        Page<Post> postPage = postRepository.getPostsByAuthor(author.getUuid(),pageable);
+
+        log.debug("Fetched {} getPostsByAuthor from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
+
+        List<PostResponseDTO> postResponseDTOList = new ArrayList<>();
+
+        for(Post post : postPage.getContent()) {
+            PostResponseDTO postResp = mapPostToResponseDTO(post, 1);
+            postResponseDTOList.add(postResp);
+        }
+
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postPage.getNumber(),
+                postPage.getTotalPages(),
+                postPage.getTotalElements(),
+                postPage.isLast()
+        );
+
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PostResponseDTO getPostByUuid(UUID uuid) {
         Post post = postRepository.findByUuid(uuid)

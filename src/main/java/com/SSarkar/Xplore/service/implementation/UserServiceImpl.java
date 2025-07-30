@@ -128,6 +128,7 @@ public class UserServiceImpl implements UserService {
         userResponse.setEmail(user.getEmail());
         userResponse.setFollowersCount(user.getFollowers().size());
         userResponse.setFollowingCount(user.getFollowing().size());
+        userResponse.setPostCount(user.getPosts().size());
 
         if (user.getUserProfile() != null) {
             userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());

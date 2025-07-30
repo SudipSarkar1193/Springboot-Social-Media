@@ -104,9 +104,24 @@ public class PostController {
 
     @GetMapping("/feed")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+            @PageableDefault(size = 10, page = 0,sort = "createdAt") Pageable pageable) {
 
         PagedResponseDTO<PostResponseDTO> posts = postService.getAllTopLevelPosts(pageable);
         return ResponseEntity.ok(posts);
     }
+
+    @GetMapping("/user/{username}")
+    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getUserPosts(
+            @PathVariable String username ,
+            @PageableDefault(size = 10, page = 0,sort = "createdAt") Pageable pageable
+    ){
+        System.out.println("**********************************");
+        System.out.println("INSIDE HELL");
+        System.out.println();;
+        PagedResponseDTO<PostResponseDTO> posts = postService.getPostsByUser(username, pageable);
+
+        return ResponseEntity.ok(posts);
+    }
+
+
 }
