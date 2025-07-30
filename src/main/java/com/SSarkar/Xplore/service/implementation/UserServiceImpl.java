@@ -131,6 +131,8 @@ public class UserServiceImpl implements UserService {
 
         if (user.getUserProfile() != null) {
             userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
+            userResponse.setBio(user.getUserProfile().getBio());
+            userResponse.setFullName(user.getUserProfile().getFullName());
         }
 
         return userResponse;
