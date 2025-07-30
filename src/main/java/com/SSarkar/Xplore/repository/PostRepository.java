@@ -39,7 +39,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findAllByParentPostIsNull(Pageable pageable);
 
     @EntityGraph(attributePaths = {"author"})
-    Page<Post> getPostsByAuthor(UUID uuid , Pageable pageable);
+    @Query("SELECT p FROM Post p WHERE p.author.uuid = :uuid")
+    Page<Post> getPostsByAuthor(@Param("uuid") UUID uuid, Pageable pageable);
 
     @Query("SELECT COUNT(l) FROM Like l WHERE l.post = :post")
     int countLikesByPost(@Param("post") Post post);
