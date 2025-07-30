@@ -7,6 +7,8 @@ import com.SSarkar.Xplore.entity.UserProfile;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -81,13 +83,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, int limit) {
         // Fetch the current user
         User currentUser = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
 
         // Fetch those users whome the current user is not following
-        List<User> suggestedUsers = userRepository.findTopUsersNotFollowedBy(currentUser.getUuid(), limit);
+        Pageable pageable = PageRequest.of(0, limit);
+        List<User> suggestedUsers = userRepository.findTopUsersNotFollowedBy(currentUser.getUuid(), pageable);
 
         List<UserResponseDTO> userResponseDTOList = new ArrayList<>(suggestedUsers.size());
         for( User user : suggestedUsers) {

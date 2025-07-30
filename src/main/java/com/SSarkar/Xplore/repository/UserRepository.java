@@ -1,6 +1,7 @@
 package com.SSarkar.Xplore.repository;
 
 import com.SSarkar.Xplore.entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -43,5 +44,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<Object> findByUuid(UUID userToFollowUuid);
 
-    List<User> findTopUsersNotFollowedBy(UUID uuid, int limit);
+    @Query("""
+    SELECT u FROM User u
+    WHERE u.uuid <> :uuid
+    AND u.uuid NOT IN (
+        SELECT f.followee.uuid FROM Follow f
+        WHERE f.follower.uuid = :uuid
+    )
+    ORDER BY u.createdAt DESC
+    """)
+    List<User> findTopUsersNotFollowedBy(@Param("uuid") UUID uuid, Pageable pageable);
+
+
 }
