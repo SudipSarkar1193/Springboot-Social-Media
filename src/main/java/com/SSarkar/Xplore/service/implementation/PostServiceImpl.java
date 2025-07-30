@@ -152,8 +152,8 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public PagedResponseDTO<PostResponseDTO> getPostsByUser(String username, Pageable pageable) {
-        User author = userRepository.findByUsername(username).orElseThrow(()->new ResourceNotFoundException("User not found"));
+    public PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID uuid, Pageable pageable) {
+        User author = (User)userRepository.findByUuid(uuid).orElseThrow(()->new ResourceNotFoundException("User not found"));
 
         log.debug("Fetched author {}",author);
 
@@ -252,6 +252,27 @@ public class PostServiceImpl implements PostService {
         // 3. Delete the like
         likeRepository.delete(like);
         log.info("User {} unliked post {}", user.getUsername(), postUuid);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(String username, Pageable pageable) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+
+        Page<Like> likedPostsPage = likeRepository.findByUser(user, pageable);
+
+        List<PostResponseDTO> postResponseDTOs = likedPostsPage.getContent().stream()
+                .map(like -> mapPostToResponseDTO(like.getPost(), 1))
+                .collect(Collectors.toList());
+
+        return new PagedResponseDTO<>(
+                postResponseDTOs,
+                likedPostsPage.getNumber(),
+                likedPostsPage.getTotalPages(),
+                likedPostsPage.getTotalElements(),
+                likedPostsPage.isLast()
+        );
     }
 
     // --- Helper Method ---

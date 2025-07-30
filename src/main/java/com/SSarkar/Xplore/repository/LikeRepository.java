@@ -3,6 +3,8 @@ package com.SSarkar.Xplore.repository;
 import com.SSarkar.Xplore.entity.Like;
 import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -21,4 +23,7 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
      * @return An Optional containing the Like if it exists, otherwise an empty Optional.
      */
     Optional<Like> findByUserAndPost(User user, Post post);
+
+
+    Page<Like> findByUser(User user, Pageable pageable);
 }
