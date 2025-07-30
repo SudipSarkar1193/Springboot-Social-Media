@@ -103,6 +103,24 @@ public class UserServiceImpl implements UserService {
 
     }
 
+    @Override
+    public List<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable) {
+        User currentUser = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
+
+        // Fetch all users except the current user
+        List<User> users = userRepository.findAllUsersExceptForCurrentUser(currentUser.getUuid(), pageable);
+
+        List<UserResponseDTO> userResponseDTOList = new ArrayList<>(users.size());
+        for (User user : users) {
+            UserResponseDTO userResponse = mapUserToResponse(user);
+            userResponseDTOList.add(userResponse);
+        }
+
+        return userResponseDTOList;
+
+    }
+
     UserResponseDTO mapUserToResponse(User user) {
         UserResponseDTO userResponse = new UserResponseDTO();
         userResponse.setUuid(user.getUuid());

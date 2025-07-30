@@ -5,6 +5,7 @@ import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.service.contract.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,7 +26,15 @@ public class UserController {
         return ResponseEntity.ok(userResponse);
     }
 
-    
+    @GetMapping("/all")
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        List<UserResponseDTO> users = userService.getAllUsers(userDetails,PageRequest.of(page, size));
+        return ResponseEntity.ok(users);
+    }
 
     @GetMapping("/profile/{username}")
     public ResponseEntity<UserResponseDTO> getUserByUsername(@PathVariable String username) {

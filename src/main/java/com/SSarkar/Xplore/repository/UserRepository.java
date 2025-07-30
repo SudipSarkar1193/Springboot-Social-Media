@@ -55,5 +55,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
     List<User> findTopUsersNotFollowedBy(@Param("uuid") UUID uuid, Pageable pageable);
 
-
+    @Query("""
+    SELECT u FROM User u 
+    WHERE u.uuid <> :uuid 
+    ORDER BY u.createdAt DESC
+    """)
+    List<User> findAllUsersExceptForCurrentUser(@Param("uuid") UUID uuid, Pageable pageable);
 }
