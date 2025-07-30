@@ -12,6 +12,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Service
 @RequiredArgsConstructor
@@ -37,16 +40,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         // Map the User entity to our UserResponseDTO
-        UserResponseDTO userResponse = new UserResponseDTO();
-        userResponse.setUuid(user.getUuid());
-        userResponse.setUsername(user.getUsername());
-        userResponse.setEmail(user.getEmail());
-        userResponse.setFollowersCount(user.getFollowers().size());
-        userResponse.setFollowingCount(user.getFollowing().size());
-
-        if (user.getUserProfile() != null) {
-            userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
-        }
+        UserResponseDTO userResponse = mapUserToResponse(user);
 
         return userResponse;
     }
@@ -84,5 +78,39 @@ public class UserServiceImpl implements UserService {
 
         // 5. Return the updated user details by reusing our existing mapping logic.
         return getUserDetailsByUsername(user.getUsername());
+    }
+
+    @Override
+    public List<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, int limit) {
+        // Fetch the current user
+        User currentUser = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
+
+        // Fetch those users whome the current user is not following
+        List<User> suggestedUsers = userRepository.findTopUsersNotFollowedBy(currentUser.getUuid(), limit);
+
+        List<UserResponseDTO> userResponseDTOList = new ArrayList<>(suggestedUsers.size());
+        for( User user : suggestedUsers) {
+            UserResponseDTO userResponse = mapUserToResponse(user);
+            userResponseDTOList.add(userResponse) ;
+        }
+
+        return userResponseDTOList;
+
+    }
+
+    UserResponseDTO mapUserToResponse(User user) {
+        UserResponseDTO userResponse = new UserResponseDTO();
+        userResponse.setUuid(user.getUuid());
+        userResponse.setUsername(user.getUsername());
+        userResponse.setEmail(user.getEmail());
+        userResponse.setFollowersCount(user.getFollowers().size());
+        userResponse.setFollowingCount(user.getFollowing().size());
+
+        if (user.getUserProfile() != null) {
+            userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
+        }
+
+        return userResponse;
     }
 }

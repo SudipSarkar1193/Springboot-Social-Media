@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -25,8 +27,17 @@ public class UserController {
 
     @GetMapping("/profile/{username}")
     public ResponseEntity<UserResponseDTO> getUserByUsername(@PathVariable String username) {
-        UserResponseDTO user = userService.getUserDetailsByUsername(username); // You'll need to create this service method
+        UserResponseDTO user = userService.getUserDetailsByUsername(username);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/suggestions")
+    public ResponseEntity<List<UserResponseDTO>> getSuggestedUsers(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(value = "limit", defaultValue = "10") int limit
+    ) {
+        List<UserResponseDTO> suggestedUsers = userService.getSuggestedUsers(userDetails, limit);
+        return ResponseEntity.ok(suggestedUsers);
     }
 
 
