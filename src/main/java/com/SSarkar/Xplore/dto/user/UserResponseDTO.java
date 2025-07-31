@@ -15,5 +15,6 @@ public class UserResponseDTO {
     private int postCount;
     private String fullName;
     private String bio ;
+    private boolean isCurrentUserFollowing;
 
 }
