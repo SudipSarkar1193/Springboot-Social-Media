@@ -42,106 +42,54 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
-        // 1. Find the author User entity
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
 
-        // 2. Create the new Post entity
         Post newPost = new Post();
         newPost.setContent(createPostRequest.getContent());
-
-        // Check if there are image URLs and set them
         if (createPostRequest.getImageUrls() != null) {
             newPost.setImageUrls(createPostRequest.getImageUrls());
         }
-
-        // 3. Use the helper method on the parent (User) to establish the link
-        author.addPost(newPost); // This syncs both sides of the relationship!
-
-        // 4. Save the new Post
-        // We save the 'child' side. Cascade settings will handle the rest.
+        author.addPost(newPost);
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
 
-        // 5. Map and return the DTO
-        return mapPostToResponseDTO(savedPost,0);
+        return mapPostToResponseDTO(savedPost, author, 0);
     }
 
     @Override
     @Transactional
     public PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUserDetails) {
-        // 1. Find the author of the comment
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        // 2. Find the parent post that is being commented on
         Post parentPost = postRepository.findByUuid(parentPostUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + parentPostUuid));
-
-        // 3. Create the new Post entity (which is our comment)
         Post comment = new Post();
         comment.setContent(commentRequest.getContent());
         comment.setAuthor(author);
-
-
-        // 4. Check for and set the image URLs from the DTO
         if (commentRequest.getImageUrls() != null && !commentRequest.getImageUrls().isEmpty()) {
             comment.setImageUrls(commentRequest.getImageUrls());
         }
-
-        // 5. Use the helper method to establish the bidirectional link
         parentPost.addComment(comment);
-
-        // 6. Save the parent post. Due to `cascade=ALL`, the new comment will be saved as well.
         postRepository.save(parentPost);
         log.info("New comment with UUID: {} added to post with UUID: {}", comment.getUuid(), parentPost.getUuid());
-
-        // 7. CREATE NOTIFICATION
         notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
 
-        // 8. Map and return the DTO for the newly created comment
-        return mapPostToResponseDTO(comment, 0); // Recursion depth starts at 0
+        return mapPostToResponseDTO(comment, author, 0);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponseDTO<PostResponseDTO> getAllPosts(Pageable pageable) {
-        // This query is efficient because of the @EntityGraph on the repository method.
-        Page<Post> postPage = postRepository.findAll(pageable);
-        log.debug("Fetched {} posts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
-
-        List<PostResponseDTO> postResponseDTOList = new ArrayList<>();
-
-        for (Post post : postPage.getContent()) {
-            // Instead of manually building the DTO, we use our helper method.
-            // It correctly handles the mapping of the post and any nested comments.
-            // We use a recursion depth of '0' for the main feed to just show the post and comment count, not the full comment thread.
-            PostResponseDTO postResp = mapPostToResponseDTO(post, 1);
-            postResponseDTOList.add(postResp);
-        }
-
-        return new PagedResponseDTO<>(
-                postResponseDTOList,
-                postPage.getNumber(),
-                postPage.getTotalPages(),
-                postPage.getTotalElements(),
-                postPage.isLast()
-        );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable) {
-        // 1. Call our new, specific repository method
+    public PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable, UserDetails currentUserDetails) {
         Page<Post> postPage = postRepository.findAllByParentPostIsNull(pageable);
         log.debug("Fetched {} top-level posts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
 
-        // 2. Map the results to DTOs (using our existing helper method)
+        User currentUser = getCurrentUserOrNull(currentUserDetails);
+
         List<PostResponseDTO> postResponseDTOList = postPage.getContent().stream()
-                .map(post -> mapPostToResponseDTO(post, 1)) // Recursion depth is 0 for a feed
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1))
                 .collect(Collectors.toList());
 
-        // 3. Return the standard paged response
         return new PagedResponseDTO<>(
                 postResponseDTOList,
                 postPage.getNumber(),
@@ -149,42 +97,41 @@ public class PostServiceImpl implements PostService {
                 postPage.getTotalElements(),
                 postPage.isLast()
         );
-    }
-
-    @Override
-    public PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID uuid, Pageable pageable) {
-        User author = (User)userRepository.findByUuid(uuid).orElseThrow(()->new ResourceNotFoundException("User not found"));
-
-        log.debug("Fetched author {}",author);
-
-
-        Page<Post> postPage = postRepository.getPostsByAuthor(author.getUuid(),pageable);
-
-        log.debug("Fetched {} getPostsByAuthor from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
-
-        List<PostResponseDTO> postResponseDTOList = new ArrayList<>();
-
-        for(Post post : postPage.getContent()) {
-            PostResponseDTO postResp = mapPostToResponseDTO(post, 1);
-            postResponseDTOList.add(postResp);
-        }
-
-        return new PagedResponseDTO<>(
-                postResponseDTOList,
-                postPage.getNumber(),
-                postPage.getTotalPages(),
-                postPage.getTotalElements(),
-                postPage.isLast()
-        );
-
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PostResponseDTO getPostByUuid(UUID uuid) {
+    public PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID userUuid, Pageable pageable, UserDetails currentUserDetails) {
+        // Find the user whose posts we want to see
+        User postAuthor = (User) userRepository.findByUuid(userUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
+
+        Page<Post> postPage = postRepository.getPostsByAuthor(postAuthor.getUuid(), pageable);
+        log.debug("Fetched {} posts for user {}", postPage.getNumberOfElements(), postAuthor.getUsername());
+
+        // Find the user who is making the request
+        User currentUser = getCurrentUserOrNull(currentUserDetails);
+
+        List<PostResponseDTO> postResponseDTOList = postPage.getContent().stream()
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1))
+                .collect(Collectors.toList());
+
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postPage.getNumber(),
+                postPage.getTotalPages(),
+                postPage.getTotalElements(),
+                postPage.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PostResponseDTO getPostByUuid(UUID uuid, UserDetails currentUserDetails) {
         Post post = postRepository.findByUuid(uuid)
-                .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid)); // Replace with a proper exception
-        return mapPostToResponseDTO(post,1);
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid));
+        User currentUser = getCurrentUserOrNull(currentUserDetails);
+        return mapPostToResponseDTO(post, currentUser, 1);
     }
 
     @Override
@@ -193,7 +140,6 @@ public class PostServiceImpl implements PostService {
         Post postToDelete = postRepository.findByUuid(uuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid));
 
-        // Security Check: Ensure the person deleting the post is the author
         String currentUsername = currentUserDetails.getUsername();
         String authorUsername = postToDelete.getAuthor().getUsername();
 
@@ -202,7 +148,6 @@ public class PostServiceImpl implements PostService {
                     currentUsername, uuid, authorUsername);
             throw new AccessDeniedException("You are not authorized to delete this post");
         }
-
         postRepository.delete(postToDelete);
         log.info("Post with UUID: {} deleted successfully by user: {}", uuid, currentUsername);
     }
@@ -210,28 +155,21 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public String likePost(UUID postUuid, UserDetails currentUserDetails) {
-        // 1. Find the user and the post
         User user = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Post post = postRepository.findByUuid(postUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + postUuid));
 
-        // 2. Check if the user has already liked the post
         if (likeRepository.findByUserAndPost(user, post).isPresent()) {
             unlikePost(postUuid, currentUserDetails);
             log.info("User {} unliked post {}", user.getUsername(), postUuid);
             return "Unliked the post";
-
         }
 
-        // 3. Create and save the new Like entity
         Like newLike = new Like(user, post);
         likeRepository.save(newLike);
         log.info("User {} liked post {}", user.getUsername(), postUuid);
-
-        // 4. CREATE NOTIFICATION
         notificationService.createNotification(user, post.getAuthor(), NotificationType.POST_LIKE, post.getUuid());
-
 
         return "Liked the post";
     }
@@ -239,31 +177,28 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public void unlikePost(UUID postUuid, UserDetails currentUserDetails) {
-        // 1. Find the user and the post
         User user = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Post post = postRepository.findByUuid(postUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + postUuid));
 
-        // 2. Find the specific "like" to remove
         Like like = likeRepository.findByUserAndPost(user, post)
                 .orElseThrow(() -> new ResourceNotFoundException("Like not found for this user and post"));
 
-        // 3. Delete the like
         likeRepository.delete(like);
         log.info("User {} unliked post {}", user.getUsername(), postUuid);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID uuid, Pageable pageable) {
-        User user = (User)userRepository.findByUuid(uuid)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with uuid: " + uuid));
+    public PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID userUuid, Pageable pageable) {
+        User user = (User) userRepository.findByUuid(userUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with uuid: " + userUuid));
 
         Page<Like> likedPostsPage = likeRepository.findByUser(user, pageable);
 
         List<PostResponseDTO> postResponseDTOs = likedPostsPage.getContent().stream()
-                .map(like -> mapPostToResponseDTO(like.getPost(), 1))
+                .map(like -> mapPostToResponseDTO(like.getPost(), user, 1))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -275,8 +210,16 @@ public class PostServiceImpl implements PostService {
         );
     }
 
-    // --- Helper Method ---
-    private PostResponseDTO mapPostToResponseDTO(Post post, int recursionDepth) {
+    // --- HELPER METHODS ---
+
+    private User getCurrentUserOrNull(UserDetails userDetails) {
+        if (userDetails == null) {
+            return null;
+        }
+        return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+    }
+
+    private PostResponseDTO mapPostToResponseDTO(Post post, User currentUser, int recursionDepth) {
         if (post == null) return null;
 
         PostResponseDTO dto = new PostResponseDTO();
@@ -288,6 +231,12 @@ public class PostServiceImpl implements PostService {
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
 
+        boolean isLiked = false;
+        if (currentUser != null) {
+            isLiked = likeRepository.findByUserAndPost(currentUser, post).isPresent();
+        }
+        dto.setLikedByCurrentUser(isLiked);
+
         dto.setLikeCount(postRepository.countLikesByPost(post));
 
         if (post.getParentPost() != null) {
@@ -295,26 +244,13 @@ public class PostServiceImpl implements PostService {
         }
 
         List<Post> commentList = post.getComments();
-
         dto.setCommentCount(commentList != null ? commentList.size() : 0);
 
-        // Check if we should process the comments
         if (recursionDepth > 0 && commentList != null && !commentList.isEmpty()) {
-
-            // 1. Create a new empty list to hold the comment DTOs
             List<PostResponseDTO> commentDTOs = new ArrayList<>();
-
-            // 2. Loop through each 'Post' entity in the original comment list
             for (Post comment : commentList) {
-
-                // 3. For each comment, map it to its DTO representation
-                PostResponseDTO commentDTO = mapPostToResponseDTO(comment, recursionDepth - 1);
-
-                // 4. Add the newly created DTO to our list
-                commentDTOs.add(commentDTO);
+                commentDTOs.add(mapPostToResponseDTO(comment, currentUser, recursionDepth - 1));
             }
-
-            // 5. Finally, set the list of comment DTOs on the main post DTO
             dto.setComments(commentDTOs);
         }
 

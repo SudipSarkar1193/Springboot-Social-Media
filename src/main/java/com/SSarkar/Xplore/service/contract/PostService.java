@@ -11,13 +11,20 @@ import java.util.UUID;
 
 public interface PostService {
     PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUser);
-    PagedResponseDTO<PostResponseDTO> getAllPosts(Pageable pageable);
-    PostResponseDTO getPostByUuid(UUID uuid);
+
+    PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable, UserDetails currentUser);
+
+    PostResponseDTO getPostByUuid(UUID uuid, UserDetails currentUser);
+
     void deletePost(UUID uuid, UserDetails currentUser);
+
     PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUser);
-    PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable);
-    PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID uuid, Pageable pageable);
+
+    PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID userUuid, Pageable pageable, UserDetails currentUser);
+
     String likePost(UUID postUuid, UserDetails currentUser);
+
     void unlikePost(UUID postUuid, UserDetails currentUser);
-    PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID uuid, Pageable pageable);
+
+    PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID userUuid, Pageable pageable);
 }

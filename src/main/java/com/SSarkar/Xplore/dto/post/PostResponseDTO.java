@@ -30,4 +30,5 @@ public class PostResponseDTO {
 
     // --- NEW Fields for Likes ---
     private int likeCount;
+    private boolean isLikedByCurrentUser;
 }

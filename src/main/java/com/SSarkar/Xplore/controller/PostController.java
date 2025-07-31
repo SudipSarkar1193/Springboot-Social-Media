@@ -27,13 +27,6 @@ public class PostController {
 
     private final PostService postService;
 
-    /**
-     * Interview Insight: Getting the Current User
-     * ---------------------------------------------
-     * The @AuthenticationPrincipal annotation is a powerful Spring Security feature.
-     * It automatically injects the currently authenticated user's principal (in our case, the UserDetails object)
-     * into the method parameter. This is the standard, secure way to identify who is making the request.
-     */
     @PostMapping
     public ResponseEntity<PostResponseDTO> createPost(
             @Valid @RequestBody CreatePostRequestDTO createPostRequest,
@@ -42,33 +35,19 @@ public class PostController {
         return new ResponseEntity<>(newPost, HttpStatus.CREATED);
     }
 
-
-    /**
-     * Interview Insight: Pagination with Pageable
-     * ------------------------------------------------
-     * We don't just return a List<PostResponseDTO>. Instead, we return a Page<PostResponseDTO>.
-     *
-     * Why? Returning a raw list is dangerous. If you have millions of posts, you'll crash your server
-     * trying to load them all into memory.
-     *
-     * Pageable automatically handles request parameters like:
-     * - ?page=0 (for the first page)
-     * - ?size=10 (for 10 items per page)
-     * - ?sort=createdAt,desc (to sort by creation date, descending)
-     *
-     * @PageableDefault provides a fallback if the client doesn't specify these params.
-     */
-    @GetMapping
-    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getAllPosts(
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
-
-        PagedResponseDTO<PostResponseDTO> posts = postService.getAllPosts(pageable);
+    @GetMapping("/feed")
+    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        PagedResponseDTO<PostResponseDTO> posts = postService.getAllTopLevelPosts(pageable, currentUser);
         return ResponseEntity.ok(posts);
     }
 
     @GetMapping("/{uuid}")
-    public ResponseEntity<PostResponseDTO> getPostByUuid(@PathVariable UUID uuid) {
-        PostResponseDTO post = postService.getPostByUuid(uuid);
+    public ResponseEntity<PostResponseDTO> getPostByUuid(
+            @PathVariable UUID uuid,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        PostResponseDTO post = postService.getPostByUuid(uuid, currentUser);
         return ResponseEntity.ok(post);
     }
 
@@ -77,19 +56,16 @@ public class PostController {
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails currentUser) {
         postService.deletePost(uuid, currentUser);
-        return ResponseEntity.noContent().build(); // HTTP 204 No Content is standard for successful deletions
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{postUuid}/like")
-    public ResponseEntity<HashMap<String,String>> likePost(
-            @PathVariable UUID postUuid ,
+    public ResponseEntity<HashMap<String, String>> likePost(
+            @PathVariable UUID postUuid,
             @AuthenticationPrincipal UserDetails currentUser) {
-
-        log.debug("User {} is liking post with UUID: {}", currentUser.getUsername(), postUuid);
-
         String msg = postService.likePost(postUuid, currentUser);
-        HashMap<String,String> map = new HashMap<>();
-        map.put("message",msg);
+        HashMap<String, String> map = new HashMap<>();
+        map.put("message", msg);
         return ResponseEntity.ok(map);
     }
 
@@ -102,25 +78,15 @@ public class PostController {
         return new ResponseEntity<>(newComment, HttpStatus.CREATED);
     }
 
-    @GetMapping("/feed")
-    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
-            @PageableDefault(size = 10, page = 0,sort = "createdAt") Pageable pageable) {
-
-        PagedResponseDTO<PostResponseDTO> posts = postService.getAllTopLevelPosts(pageable);
-        return ResponseEntity.ok(posts);
-    }
-
     @GetMapping("/user/{uuid}")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getUserPosts(
-            @PathVariable UUID uuid ,
-            @PageableDefault(size = 10, page = 0,sort = "createdAt") Pageable pageable
-    ){
-        System.out.println("HEYY ! DEBUG DEBUG DEBUG");
-        PagedResponseDTO<PostResponseDTO> posts = postService.getPostsByUser(uuid, pageable);
-
+            @PathVariable UUID uuid,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @AuthenticationPrincipal UserDetails currentUser
+    ) {
+        PagedResponseDTO<PostResponseDTO> posts = postService.getPostsByUser(uuid, pageable, currentUser);
         return ResponseEntity.ok(posts);
     }
-
 
     @GetMapping("/likes/{uuid}")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getLikedPosts(
@@ -130,6 +96,4 @@ public class PostController {
         PagedResponseDTO<PostResponseDTO> posts = postService.getLikedPostsByUser(uuid, pageable);
         return ResponseEntity.ok(posts);
     }
-
-
 }
