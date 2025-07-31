@@ -11,7 +11,7 @@ import java.util.List;
 public interface UserService {
     UserResponseDTO getCurrentUserDetails(UserDetails userDetails);
 
-    UserResponseDTO getUserDetailsByUsername(String username);
+    UserResponseDTO getUserDetailsByUsername(String username,UserDetails currentUserDetails);
 
     UserResponseDTO updateUserProfile(UserDetails currentUserDetails, @Valid UserProfileUpdateDTO updateDTO);
 

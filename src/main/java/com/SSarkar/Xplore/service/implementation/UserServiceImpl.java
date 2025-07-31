@@ -2,8 +2,11 @@ package com.SSarkar.Xplore.service.implementation;
 
 import com.SSarkar.Xplore.dto.user.UserProfileUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
+import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.entity.UserProfile;
+import com.SSarkar.Xplore.exception.ResourceNotFoundException;
+import com.SSarkar.Xplore.repository.FollowRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.UserService;
 import lombok.RequiredArgsConstructor;
@@ -24,27 +27,21 @@ public class UserServiceImpl implements UserService {
 
 
     private final UserRepository userRepository;
+    private final FollowRepository followRepository;
 
     @Override
     @Transactional(readOnly = true)
     public UserResponseDTO getCurrentUserDetails(UserDetails currentUser) {
-        try{
-            return getUserDetailsByUsername(currentUser.getUsername());
-        }catch(UsernameNotFoundException e){
-            throw e;
-        }
+        return getUserDetailsByUsername(currentUser.getUsername(), currentUser);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public UserResponseDTO getUserDetailsByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    public UserResponseDTO getUserDetailsByUsername(String username,UserDetails currentUserDetails) {
+        User user = userRepository.findByUsername(username).
+                orElseThrow(()->new ResourceNotFoundException("User not found"));
 
-        // Map the User entity to our UserResponseDTO
-        UserResponseDTO userResponse = mapUserToResponse(user);
-
-        return userResponse;
+        return mapUserToResponse(user,isFollowing(user,currentUserDetails)) ;
     }
 
     @Override
@@ -79,7 +76,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         // 5. Return the updated user details by reusing our existing mapping logic.
-        return getUserDetailsByUsername(user.getUsername());
+        return getUserDetailsByUsername(user.getUsername(),currentUserDetails);
     }
 
     @Override
@@ -95,7 +92,7 @@ public class UserServiceImpl implements UserService {
 
         List<UserResponseDTO> userResponseDTOList = new ArrayList<>(suggestedUsers.size());
         for( User user : suggestedUsers) {
-            UserResponseDTO userResponse = mapUserToResponse(user);
+            UserResponseDTO userResponse = mapUserToResponse(user,isFollowing(user,userDetails));
             userResponseDTOList.add(userResponse) ;
         }
 
@@ -113,7 +110,7 @@ public class UserServiceImpl implements UserService {
 
         List<UserResponseDTO> userResponseDTOList = new ArrayList<>(users.size());
         for (User user : users) {
-            UserResponseDTO userResponse = mapUserToResponse(user);
+            UserResponseDTO userResponse = mapUserToResponse(user,isFollowing(user,userDetails));
             userResponseDTOList.add(userResponse);
         }
 
@@ -121,7 +118,7 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    UserResponseDTO mapUserToResponse(User user) {
+    UserResponseDTO mapUserToResponse(User user,boolean isFollowing ) {
         UserResponseDTO userResponse = new UserResponseDTO();
         userResponse.setUuid(user.getUuid());
         userResponse.setUsername(user.getUsername());
@@ -129,6 +126,7 @@ public class UserServiceImpl implements UserService {
         userResponse.setFollowersCount(user.getFollowers().size());
         userResponse.setFollowingCount(user.getFollowing().size());
         userResponse.setPostCount(user.getPosts().size());
+        userResponse.setCurrentUserFollowing(isFollowing);
 
         if (user.getUserProfile() != null) {
             userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
@@ -137,5 +135,24 @@ public class UserServiceImpl implements UserService {
         }
 
         return userResponse;
+    }
+
+    private boolean isFollowing(User user , UserDetails currentUserDetails){
+        // If there's no logged-in user, they can't be following anyone.
+        if (currentUserDetails == null) {
+            return false;
+        }
+
+        // Fetch the current user.
+        User currentUser = userRepository.findByUsername(currentUserDetails.getUsername()).orElse(null);
+
+        // If the current user can't be found, or they are looking at their own profile, return false.
+        if (currentUser == null || currentUser.getId().equals(user.getId())) {
+            return false;
+        }
+
+        Follow follow = followRepository.findByFollowerAndFollowee(currentUser, user).orElse(null);
+
+        return follow != null ;
     }
 }
