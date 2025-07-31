@@ -1,6 +1,7 @@
 package com.SSarkar.Xplore.controller;
 
 import com.SSarkar.Xplore.dto.follow.FollowerDTO;
+import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.service.contract.FollowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -29,13 +30,13 @@ public class FollowController {
     }
 
     @GetMapping("/followers")
-    public ResponseEntity<List<FollowerDTO>> getFollowers(@PathVariable UUID uuid) {
-        return ResponseEntity.ok(followService.getFollowers(uuid));
+    public ResponseEntity<List<UserResponseDTO>> getFollowers(@PathVariable UUID uuid,@AuthenticationPrincipal UserDetails currentUser) {
+        return ResponseEntity.ok(followService.getFollowers(uuid,currentUser));
     }
 
     @GetMapping("/following")
-    public ResponseEntity<List<FollowerDTO>> getFollowing(@PathVariable UUID uuid) {
-        return ResponseEntity.ok(followService.getFollowing(uuid));
+    public ResponseEntity<List<UserResponseDTO>> getFollowing(@PathVariable UUID uuid, @AuthenticationPrincipal UserDetails currentUser) {
+        return ResponseEntity.ok(followService.getFollowing(uuid,currentUser));
     }
 
 }

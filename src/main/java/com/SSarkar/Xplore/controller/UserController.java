@@ -58,7 +58,7 @@ public class UserController {
     }
 
 
-    @PutMapping("/profile")
+    @PutMapping("/update")
     public ResponseEntity<UserResponseDTO> updateUserProfile(
             @AuthenticationPrincipal UserDetails currentUserDetails,
             @Valid @RequestBody UserProfileUpdateDTO updateDTO
