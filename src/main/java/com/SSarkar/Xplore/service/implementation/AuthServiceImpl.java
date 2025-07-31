@@ -55,22 +55,24 @@ public class AuthServiceImpl implements AuthService {
 
         UserProfile userProfile = new UserProfile();
 
-        boolean isUserProfileEmpy = true;
+
         if (registrationRequest.isProfilePictureUrlValid()) {
             userProfile.setProfilePictureUrl(registrationRequest.getProfilePictureUrl());
             log.debug("Profile picture URL set: {}", registrationRequest.getProfilePictureUrl());
-
-            isUserProfileEmpy = false;
+        }else{
+            //https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png
+            userProfile.setProfilePictureUrl("https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png");
+            log.debug("Profile picture URL set with default url");
         }
 
         if(registrationRequest.getFullName() != null && !registrationRequest.getFullName().isEmpty()) {
             userProfile.setFullName(registrationRequest.getFullName());
             log.debug("Full name set: {}", registrationRequest.getFullName());
-            isUserProfileEmpy = false;
+
         }
 
-        if(!isUserProfileEmpy)
-            user.setUserProfile(userProfile);
+
+        user.setUserProfile(userProfile);
 
         // 3. Encode the password before saving
         String encodedPassword = passwordEncoder.encode(registrationRequest.getPassword());
