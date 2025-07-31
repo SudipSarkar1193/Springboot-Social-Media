@@ -92,7 +92,7 @@ public class UserServiceImpl implements UserService {
 
         List<UserResponseDTO> userResponseDTOList = new ArrayList<>(suggestedUsers.size());
         for( User user : suggestedUsers) {
-            UserResponseDTO userResponse = mapUserToResponse(user,isFollowing(user,userDetails));
+            UserResponseDTO userResponse = mapUserToResponse(user,false);
             userResponseDTOList.add(userResponse) ;
         }
 
