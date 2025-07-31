@@ -24,6 +24,13 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
      */
     Optional<Like> findByUserAndPost(User user, Post post);
 
-
+    /**
+     * Finds all likes made by a specific user, paginated.
+     * This is useful for displaying a user's liked posts in a paginated format.
+     *
+     * @param user The user whose likes are being queried.
+     * @param pageable The pagination information.
+     * @return A Page of Like entities made by the specified user.
+     */
     Page<Like> findByUser(User user, Pageable pageable);
 }

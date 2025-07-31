@@ -96,6 +96,8 @@ public class User implements UserDetails {
     @ToString.Exclude
     private List<Follow> following = new ArrayList<>();
 
+
+
     // --- UserDetails methods---
 
     @Override

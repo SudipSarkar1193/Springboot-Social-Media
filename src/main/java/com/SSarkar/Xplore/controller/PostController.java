@@ -122,12 +122,12 @@ public class PostController {
     }
 
 
-    @GetMapping("/likes/{username}")
+    @GetMapping("/likes/{uuid}")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getLikedPosts(
-            @PathVariable String username,
+            @PathVariable UUID uuid,
             @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable
     ) {
-        PagedResponseDTO<PostResponseDTO> posts = postService.getLikedPostsByUser(username, pageable);
+        PagedResponseDTO<PostResponseDTO> posts = postService.getLikedPostsByUser(uuid, pageable);
         return ResponseEntity.ok(posts);
     }
 

@@ -19,5 +19,5 @@ public interface PostService {
     PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID uuid, Pageable pageable);
     String likePost(UUID postUuid, UserDetails currentUser);
     void unlikePost(UUID postUuid, UserDetails currentUser);
-    PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(String username, Pageable pageable);
+    PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID uuid, Pageable pageable);
 }

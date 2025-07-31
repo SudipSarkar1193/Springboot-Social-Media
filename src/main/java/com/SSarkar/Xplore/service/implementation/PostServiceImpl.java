@@ -256,9 +256,9 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(String username, Pageable pageable) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+    public PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID uuid, Pageable pageable) {
+        User user = (User)userRepository.findByUuid(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with uuid: " + uuid));
 
         Page<Like> likedPostsPage = likeRepository.findByUser(user, pageable);
 
