@@ -1,9 +1,6 @@
 package com.SSarkar.Xplore.service.implementation;
 
-import com.SSarkar.Xplore.dto.post.CommentRequestDTO;
-import com.SSarkar.Xplore.dto.post.CreatePostRequestDTO;
-import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
-import com.SSarkar.Xplore.dto.post.PostResponseDTO;
+import com.SSarkar.Xplore.dto.post.*;
 import com.SSarkar.Xplore.entity.Like;
 import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.entity.User;
@@ -150,6 +147,27 @@ public class PostServiceImpl implements PostService {
         }
         postRepository.delete(postToDelete);
         log.info("Post with UUID: {} deleted successfully by user: {}", uuid, currentUsername);
+    }
+
+    @Override
+    public Post updatePost(UserDetails currentUser, UUID postUuid,PostUpdateDTO postUpdateDTO) {
+        User user = userRepository.findByUsername(currentUser.getUsername())
+                .orElseThrow(()->new ResourceNotFoundException("User not found"));
+
+        Post post = postRepository.findByUuid(postUuid)
+                .orElseThrow(()->new ResourceNotFoundException("Post not found"));
+
+        if(post.getAuthor().getUuid().equals(postUpdateDTO.getAuthorUUid())){
+            throw new AccessDeniedException("You are not authorized to update this post");
+        }
+
+        post.setContent(postUpdateDTO.getContent());
+        post.setImageUrls(postUpdateDTO.getImageUrls());
+
+        postRepository.save(post);
+
+        return post ;
+
     }
 
     @Override
