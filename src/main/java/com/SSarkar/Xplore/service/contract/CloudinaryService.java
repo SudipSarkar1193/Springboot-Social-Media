@@ -4,4 +4,5 @@ import java.io.IOException;
 
 public interface CloudinaryService {
     String upload(String base64Image) throws IOException;
+    void delete(String imageUrl) throws IOException;
 }

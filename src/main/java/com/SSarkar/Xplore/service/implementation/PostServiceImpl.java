@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -84,12 +85,31 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Post parentPost = postRepository.findByUuid(parentPostUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + parentPostUuid));
+
         Post comment = new Post();
         comment.setContent(commentRequest.getContent());
         comment.setAuthor(author);
         if (commentRequest.getImageUrls() != null && !commentRequest.getImageUrls().isEmpty()) {
-            comment.setImageUrls(commentRequest.getImageUrls());
+
+            List<String> urls = new ArrayList<>();
+
+            for(String base64ImgString : commentRequest.getImageUrls()) {
+                String imgUrl = null;
+                try {
+                    imgUrl = cloudinaryService.upload(base64ImgString);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                if (imgUrl != null) {
+                    urls.add(imgUrl);
+                } else {
+                    log.warn("Failed to upload image, skipping: {}", base64ImgString);
+                }
+            }
+
+            comment.setImageUrls(urls);
         }
+
         parentPost.addComment(comment);
         postRepository.save(parentPost);
         log.info("New comment with UUID: {} added to post with UUID: {}", comment.getUuid(), parentPost.getUuid());
@@ -180,15 +200,52 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findByUuid(postUuid)
                 .orElseThrow(()->new ResourceNotFoundException("Post not found"));
 
-        if(post.getAuthor().getUuid().equals(postUpdateDTO.getAuthorUUid())){
+        if (!post.getAuthor().getUuid().equals(user.getUuid())) {
+            log.warn("ACCESS DENIED: User '{}' attempted to update post '{}' owned by '{}'",
+                    user.getUsername(), postUuid, post.getAuthor().getUsername());
             throw new AccessDeniedException("You are not authorized to update this post");
         }
-
         post.setContent(postUpdateDTO.getContent());
-        post.setImageUrls(postUpdateDTO.getImageUrls());
 
-        postRepository.save(post);
+        List<String> oldImgUrls = post.getImageUrls();
+        List<String> existingImgUrls = postUpdateDTO.getExistingImages();
 
+        // If any image url that is in oldImgUrls is not in existingImgUrls, we consider it for deletion
+        if (existingImgUrls != null && !existingImgUrls.isEmpty()) {
+            for(String oldImgUrl : oldImgUrls) {
+                if (!existingImgUrls.contains(oldImgUrl)) {
+                    try {
+                        cloudinaryService.delete(oldImgUrl);
+                        log.info("Deleted image from cloudinary: {}", oldImgUrl);
+                    } catch (IOException e) {
+                        log.error("Failed to delete image from cloudinary: {}", oldImgUrl, e);
+                    }
+                }
+            }
+        }
+
+
+        if(postUpdateDTO.getNewImages()!=null && !postUpdateDTO.getNewImages().isEmpty()) {
+
+            for(String base64ImgString : postUpdateDTO.getNewImages()) {
+                String imgUrl = null;
+                try {
+                    imgUrl = cloudinaryService.upload(base64ImgString);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                if (imgUrl != null) {
+                    existingImgUrls.add(imgUrl);
+                } else {
+                    log.warn("Failed to upload image, skipping: {}", base64ImgString);
+                }
+            }
+
+        }
+        post.setImageUrls(existingImgUrls);
+        post.setUpdatedAt(Instant.ofEpochSecond(System.currentTimeMillis()));
+        post = postRepository.save(post);
+        log.info("Post with UUID: {} updated successfully by user: {}", postUuid, user);
         return post ;
 
     }
@@ -272,7 +329,7 @@ public class PostServiceImpl implements PostService {
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
 
-        if(post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
+        if(post.getAuthor().getUserProfile() !=null && post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
             dto.setAuthorProfilePictureUrl(post.getAuthor().getUserProfile().getProfilePictureUrl());
         } else {
             dto.setAuthorProfilePictureUrl("https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png");

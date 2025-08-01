@@ -10,11 +10,15 @@ import java.util.UUID;
 
 @Data
 public class PostUpdateDTO {
-    @NotBlank(message = "Post content cannot be blank")
-    @Size(min = 1, max = 320, message = "Content must be between 1 and 320 characters")
+    @NotBlank(message = "Post content cannot be empty.")
+    @Size(max = 1000, message = "Post content cannot exceed 1000 characters.")
     private String content;
 
-    private List<String> imageUrls = new ArrayList<>();
+    // list of URLs for existingImages that should be kept.
+    private List<String> existingImages;
+
+    // list of new images encoded as Base64 strings.
+    private List<String> newImages;
 
     @NotBlank(message = "Must provide user uuid")
     private UUID authorUUid ;

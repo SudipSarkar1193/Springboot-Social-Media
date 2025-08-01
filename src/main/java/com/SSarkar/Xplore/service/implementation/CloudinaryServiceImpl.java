@@ -20,4 +20,11 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         Map<?, ?> uploadResult = cloudinary.uploader().upload(base64Image, ObjectUtils.emptyMap());
         return (String) uploadResult.get("secure_url");
     }
+
+    @Override
+    public void delete(String imageUrl) throws IOException {
+        // Extract the public ID from the URL
+        String publicId = imageUrl.substring(imageUrl.lastIndexOf("/") + 1, imageUrl.lastIndexOf("."));
+        cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+    }
 }
