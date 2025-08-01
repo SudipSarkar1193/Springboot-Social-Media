@@ -31,6 +31,11 @@ public class PostController {
     public ResponseEntity<PostResponseDTO> createPost(
             @Valid @RequestBody CreatePostRequestDTO createPostRequest,
             @AuthenticationPrincipal UserDetails currentUser) {
+
+        log.info("Creating post for user: {}", currentUser.getUsername());
+        log.debug("Post creation request: {}", createPostRequest);
+
+
         PostResponseDTO newPost = postService.createPost(createPostRequest, currentUser);
         return new ResponseEntity<>(newPost, HttpStatus.CREATED);
     }

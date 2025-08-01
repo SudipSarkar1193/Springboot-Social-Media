@@ -9,6 +9,7 @@ import com.SSarkar.Xplore.exception.ResourceNotFoundException;
 import com.SSarkar.Xplore.repository.LikeRepository;
 import com.SSarkar.Xplore.repository.PostRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
+import com.SSarkar.Xplore.service.contract.CloudinaryService;
 import com.SSarkar.Xplore.service.contract.NotificationService;
 import com.SSarkar.Xplore.service.contract.PostService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +37,7 @@ public class PostServiceImpl implements PostService {
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
     private final NotificationService notificationService;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional
@@ -44,8 +47,28 @@ public class PostServiceImpl implements PostService {
 
         Post newPost = new Post();
         newPost.setContent(createPostRequest.getContent());
-        if (createPostRequest.getImageUrls() != null) {
-            newPost.setImageUrls(createPostRequest.getImageUrls());
+        if (createPostRequest.getImageUrls() != null && !createPostRequest.getImageUrls().isEmpty()) {
+            List<String> imgUrls = new ArrayList<>();
+
+            for(String base64ImgString : createPostRequest.getImageUrls()) {
+                String imgUrl = null;
+                try {
+                    imgUrl = cloudinaryService.upload(base64ImgString);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                if (imgUrl != null) {
+                    imgUrls.add(imgUrl);
+                } else {
+                    log.warn("Failed to upload image, skipping: {}", base64ImgString);
+                }
+            }
+
+            if (!imgUrls.isEmpty()) {
+                newPost.setImageUrls(imgUrls);
+            } else {
+                log.warn("No valid image URLs provided, post will be created without images.");
+            }
         }
         author.addPost(newPost);
         Post savedPost = postRepository.save(newPost);
