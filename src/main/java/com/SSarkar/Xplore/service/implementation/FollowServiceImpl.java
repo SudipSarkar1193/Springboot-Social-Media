@@ -64,7 +64,6 @@ public class FollowServiceImpl implements FollowService {
 
 
     @Override
-    @Transactional
     public void unfollowUser(User follower, User followee) {
 
         if (follower.getId().equals(followee.getId())) {
