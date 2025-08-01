@@ -8,6 +8,7 @@ import com.SSarkar.Xplore.entity.UserProfile;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
 import com.SSarkar.Xplore.repository.FollowRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
+import com.SSarkar.Xplore.service.contract.CloudinaryService;
 import com.SSarkar.Xplore.service.contract.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +30,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final CloudinaryService cloudinaryService ;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,7 +71,13 @@ public class UserServiceImpl implements UserService {
             userProfile.setBio(updateDTO.getBio());
         }
         if (updateDTO.getProfileImageUrl() != null) {
-            userProfile.setProfilePictureUrl(updateDTO.getProfileImageUrl());
+            String url = null;
+            try {
+                url = cloudinaryService.upload(updateDTO.getProfileImageUrl());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            userProfile.setProfilePictureUrl(url);
         }
 
         // 4. Save the User entity. Because of the CascadeType.ALL setting on the

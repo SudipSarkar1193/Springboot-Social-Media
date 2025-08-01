@@ -9,6 +9,7 @@ import com.SSarkar.Xplore.entity.UserProfile;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.security.jwt.JwtUtils;
 import com.SSarkar.Xplore.service.contract.AuthService;
+import com.SSarkar.Xplore.service.contract.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+
 
 @Slf4j
 @Service
@@ -29,8 +32,9 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager; // New
-    private final JwtUtils jwtUtils; // New
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtils jwtUtils;
+    private  final CloudinaryService cloudinaryService;
 
     @Transactional
     @Override
@@ -57,7 +61,17 @@ public class AuthServiceImpl implements AuthService {
 
 
         if (registrationRequest.isProfilePictureUrlValid()) {
-            userProfile.setProfilePictureUrl(registrationRequest.getProfilePictureUrl());
+
+            String url = null;
+
+            try {
+                url = cloudinaryService.upload(registrationRequest.getProfilePictureUrl());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            userProfile.setProfilePictureUrl(url);
+
             log.debug("Profile picture URL set: {}", registrationRequest.getProfilePictureUrl());
         }else{
             //https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png
@@ -99,7 +113,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    // Assuming this method is in your AuthService or AuthController
     public AuthResponseDTO loginUser(LoginRequestDTO loginRequest) {
 
         // CHANGE HERE 👇
