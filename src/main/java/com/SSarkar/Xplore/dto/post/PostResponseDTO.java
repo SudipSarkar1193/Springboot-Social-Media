@@ -22,6 +22,7 @@ public class PostResponseDTO {
     private Instant updatedAt;
     private String authorUsername;
     private UUID authorUuid;
+    private String authorProfilePictureUrl;
 
     // --- NEW Fields for Comments ---
     private UUID parentPostUuid;

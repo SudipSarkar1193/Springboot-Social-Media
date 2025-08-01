@@ -272,6 +272,13 @@ public class PostServiceImpl implements PostService {
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
 
+        if(post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
+            dto.setAuthorProfilePictureUrl(post.getAuthor().getUserProfile().getProfilePictureUrl());
+        } else {
+            dto.setAuthorProfilePictureUrl("https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png");
+
+        }
+
         boolean isLiked = false;
         if (currentUser != null) {
             isLiked = likeRepository.findByUserAndPost(currentUser, post).isPresent();
