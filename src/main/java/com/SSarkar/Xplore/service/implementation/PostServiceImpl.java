@@ -193,6 +193,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional
     public Post updatePost(UserDetails currentUser, UUID postUuid, PostUpdateDTO postUpdateDTO) {
         User user = userRepository.findByUsername(currentUser.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
