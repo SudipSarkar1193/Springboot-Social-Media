@@ -193,12 +193,12 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Post updatePost(UserDetails currentUser, UUID postUuid,PostUpdateDTO postUpdateDTO) {
+    public Post updatePost(UserDetails currentUser, UUID postUuid, PostUpdateDTO postUpdateDTO) {
         User user = userRepository.findByUsername(currentUser.getUsername())
-                .orElseThrow(()->new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Post post = postRepository.findByUuid(postUuid)
-                .orElseThrow(()->new ResourceNotFoundException("Post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
 
         if (!post.getAuthor().getUuid().equals(user.getUuid())) {
             log.warn("ACCESS DENIED: User '{}' attempted to update post '{}' owned by '{}'",
@@ -207,12 +207,17 @@ public class PostServiceImpl implements PostService {
         }
         post.setContent(postUpdateDTO.getContent());
 
-        List<String> oldImgUrls = post.getImageUrls();
-        List<String> existingImgUrls = postUpdateDTO.getExistingImages();
+        List<String> oldImgUrls = new ArrayList<>(post.getImageUrls()); // Create a copy to avoid concurrent modification issues
 
-        // If any image url that is in oldImgUrls is not in existingImgUrls, we consider it for deletion
-        if (existingImgUrls != null && !existingImgUrls.isEmpty()) {
-            for(String oldImgUrl : oldImgUrls) {
+        List<String> existingImgUrls = postUpdateDTO.getExistingImages();
+        if (existingImgUrls == null) {
+            existingImgUrls = new ArrayList<>();
+        }
+
+
+        // If any image url that is in oldImgUrls is not in existingImgUrls, we delete it
+        if (!oldImgUrls.isEmpty()) {
+            for (String oldImgUrl : oldImgUrls) {
                 if (!existingImgUrls.contains(oldImgUrl)) {
                     try {
                         cloudinaryService.delete(oldImgUrl);
@@ -225,9 +230,9 @@ public class PostServiceImpl implements PostService {
         }
 
 
-        if(postUpdateDTO.getNewImages()!=null && !postUpdateDTO.getNewImages().isEmpty()) {
+        if (postUpdateDTO.getNewImages() != null && !postUpdateDTO.getNewImages().isEmpty()) {
 
-            for(String base64ImgString : postUpdateDTO.getNewImages()) {
+            for (String base64ImgString : postUpdateDTO.getNewImages()) {
                 String imgUrl = null;
                 try {
                     imgUrl = cloudinaryService.upload(base64ImgString);
@@ -237,19 +242,18 @@ public class PostServiceImpl implements PostService {
                 if (imgUrl != null) {
                     existingImgUrls.add(imgUrl);
                 } else {
-                    log.warn("Failed to upload image, skipping: {}", base64ImgString);
+                    log.warn("Failed to upload image, skipping");
                 }
             }
-
         }
+
         post.setImageUrls(existingImgUrls);
-        post.setUpdatedAt(Instant.ofEpochSecond(System.currentTimeMillis()));
-        post = postRepository.save(post);
-        log.info("Post with UUID: {} updated successfully by user: {}", postUuid, user);
-        return post ;
+        post.setUpdatedAt(Instant.now()); //Instant.now() for better precision
+        Post updatedPost = postRepository.save(post);
+        log.info("Post with UUID: {} updated successfully by user: {}", postUuid, user.getUsername());
+        return updatedPost;
 
     }
-
     @Override
     @Transactional
     public String likePost(UUID postUuid, UserDetails currentUserDetails) {
