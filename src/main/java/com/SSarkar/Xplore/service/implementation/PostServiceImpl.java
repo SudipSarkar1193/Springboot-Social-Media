@@ -110,12 +110,17 @@ public class PostServiceImpl implements PostService {
             comment.setImageUrls(urls);
         }
 
-        parentPost.addComment(comment);
+        // Save the comment first to make it a persistent entity
+        Post savedComment = postRepository.save(comment);
+
+        // Now add the persistent comment to the parent post
+        parentPost.addComment(savedComment);
         postRepository.save(parentPost);
-        log.info("New comment with UUID: {} added to post with UUID: {}", comment.getUuid(), parentPost.getUuid());
+
+        log.info("New comment with UUID: {} added to post with UUID: {}", savedComment.getUuid(), parentPost.getUuid());
         notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
 
-        return mapPostToResponseDTO(comment, author, 0);
+        return mapPostToResponseDTO(savedComment, author, 0);
     }
 
     @Override
