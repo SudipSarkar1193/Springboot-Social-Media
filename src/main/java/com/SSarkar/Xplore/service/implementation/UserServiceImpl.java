@@ -2,7 +2,6 @@ package com.SSarkar.Xplore.service.implementation;
 
 import com.SSarkar.Xplore.dto.user.UserProfileUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
-import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.entity.UserProfile;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
@@ -21,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 
 
 @Service
@@ -91,11 +91,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, int limit) {
-        // Fetch the current user
         User currentUser = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
 
-        // Fetch those users whome the current user is not following
         Pageable pageable = PageRequest.of(0, limit);
         List<User> suggestedUsers = userRepository.findTopUsersNotFollowedBy(currentUser.getUuid(), pageable);
 
@@ -106,7 +104,6 @@ public class UserServiceImpl implements UserService {
         }
 
         return userResponseDTOList;
-
     }
 
     @Override
@@ -124,7 +121,6 @@ public class UserServiceImpl implements UserService {
         }
 
         return userResponseDTOList;
-
     }
 
     UserResponseDTO mapUserToResponse(User user,boolean isFollowing ) {
@@ -132,9 +128,9 @@ public class UserServiceImpl implements UserService {
         userResponse.setUuid(user.getUuid());
         userResponse.setUsername(user.getUsername());
         userResponse.setEmail(user.getEmail());
-        userResponse.setFollowersCount(user.getFollowers().size());
-        userResponse.setFollowingCount(user.getFollowing().size());
-        userResponse.setPostCount(user.getPosts().size());
+        userResponse.setFollowersCount(userRepository.countFollowers(user));
+        userResponse.setFollowingCount(userRepository.countFollowing(user));
+        userResponse.setPostCount(userRepository.countPosts(user));
         userResponse.setCurrentUserFollowing(isFollowing);
 
         if (user.getUserProfile() != null) {
@@ -147,21 +143,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean isFollowing(User user , UserDetails currentUserDetails){
-        // If there's no logged-in user, they can't be following anyone.
         if (currentUserDetails == null) {
             return false;
         }
 
-        // Fetch the current user.
         User currentUser = userRepository.findByUsername(currentUserDetails.getUsername()).orElse(null);
 
-        // If the current user can't be found, or they are looking at their own profile, return false.
         if (currentUser == null || currentUser.getId().equals(user.getId())) {
             return false;
         }
 
-        Follow follow = followRepository.findByFollowerAndFollowee(currentUser, user).orElse(null);
-
-        return follow != null ;
+        return followRepository.findByFollowerAndFollowee(currentUser, user).isPresent();
     }
 }
