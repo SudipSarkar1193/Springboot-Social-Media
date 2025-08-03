@@ -24,9 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,8 +38,6 @@ public class PostServiceImpl implements PostService {
     private final NotificationService notificationService;
     private final CloudinaryService cloudinaryService;
 
-    @Override
-    @Transactional
     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
@@ -75,7 +71,7 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
 
-        return mapPostToResponseDTO(savedPost, author, 0);
+        return mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet());
     }
 
     @Override
@@ -120,7 +116,7 @@ public class PostServiceImpl implements PostService {
         log.info("New comment with UUID: {} added to post with UUID: {}", savedComment.getUuid(), parentPost.getUuid());
         notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
 
-        return mapPostToResponseDTO(savedComment, author, 0);
+        return mapPostToResponseDTO(savedComment, author, 0, Collections.emptyMap(), Collections.emptySet());
     }
 
     @Override
@@ -130,9 +126,21 @@ public class PostServiceImpl implements PostService {
         log.debug("Fetched {} top-level posts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
 
         User currentUser = getCurrentUserOrNull(currentUserDetails);
+        List<Post> posts = postPage.getContent();
 
-        List<PostResponseDTO> postResponseDTOList = postPage.getContent().stream()
-                .map(post -> mapPostToResponseDTO(post, currentUser, 1))
+        // Fetch like counts in bulk
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        // Fetch liked statuses in bulk
+        Set<UUID> likedPostUuids = (currentUser != null)
+                ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts)
+                : Collections.emptySet();
+
+        List<PostResponseDTO> postResponseDTOList = posts.stream()
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -147,18 +155,26 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID userUuid, Pageable pageable, UserDetails currentUserDetails) {
-        // Find the user whose posts we want to see
         User postAuthor = (User) userRepository.findByUuid(userUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
 
         Page<Post> postPage = postRepository.getPostsByAuthor(postAuthor.getUuid(), pageable);
         log.debug("Fetched {} posts for user {}", postPage.getNumberOfElements(), postAuthor.getUsername());
 
-        // Find the user who is making the request
         User currentUser = getCurrentUserOrNull(currentUserDetails);
+        List<Post> posts = postPage.getContent();
 
-        List<PostResponseDTO> postResponseDTOList = postPage.getContent().stream()
-                .map(post -> mapPostToResponseDTO(post, currentUser, 1))
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        Set<UUID> likedPostUuids = (currentUser != null)
+                ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts)
+                : Collections.emptySet();
+
+        List<PostResponseDTO> postResponseDTOList = posts.stream()
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -176,7 +192,17 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findByUuid(uuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid));
         User currentUser = getCurrentUserOrNull(currentUserDetails);
-        return mapPostToResponseDTO(post, currentUser, 1);
+
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(List.of(post)).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        Set<UUID> likedPostUuids = (currentUser != null)
+                ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, List.of(post))
+                : Collections.emptySet();
+
+        return mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids);
     }
 
     @Override
@@ -305,8 +331,26 @@ public class PostServiceImpl implements PostService {
 
         Page<Like> likedPostsPage = likeRepository.findByUser(user, pageable);
 
-        List<PostResponseDTO> postResponseDTOs = likedPostsPage.getContent().stream()
-                .map(like -> mapPostToResponseDTO(like.getPost(), user, 1))
+        // Extract the list of posts from the likes
+        List<Post> posts = likedPostsPage.getContent().stream()
+                .map(Like::getPost)
+                .collect(Collectors.toList());
+
+        // Fetch like counts for these posts in bulk
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        // Fetch liked statuses for these posts in bulk
+        // Since these are all liked posts by the user, all of them will be in the set.
+        Set<UUID> likedPostUuids = posts.stream()
+                .map(Post::getUuid)
+                .collect(Collectors.toSet());
+
+        // Use the new mapping method with the fetched data
+        List<PostResponseDTO> postResponseDTOs = posts.stream()
+                .map(post -> mapPostToResponseDTO(post, user, 1, likeCounts, likedPostUuids))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -338,7 +382,7 @@ public class PostServiceImpl implements PostService {
         return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
     }
 
-    private PostResponseDTO mapPostToResponseDTO(Post post, User currentUser, int recursionDepth) {
+    private PostResponseDTO mapPostToResponseDTO(Post post, User currentUser, int recursionDepth, Map<UUID, Long> likeCounts, Set<UUID> likedPostUuids) {
         if (post == null) return null;
 
         PostResponseDTO dto = new PostResponseDTO();
@@ -351,20 +395,14 @@ public class PostServiceImpl implements PostService {
         dto.setAuthorUuid(post.getAuthor().getUuid());
         dto.setShareCount(post.getShareCount());
 
-        if(post.getAuthor().getUserProfile() !=null && post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
+        if (post.getAuthor().getUserProfile() != null && post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
             dto.setAuthorProfilePictureUrl(post.getAuthor().getUserProfile().getProfilePictureUrl());
         } else {
             dto.setAuthorProfilePictureUrl("https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png");
-
         }
 
-        boolean isLiked = false;
-        if (currentUser != null) {
-            isLiked = likeRepository.findByUserAndPost(currentUser, post).isPresent();
-        }
-        dto.setLikedByCurrentUser(isLiked);
-
-        dto.setLikeCount(postRepository.countLikesByPost(post));
+        dto.setLikedByCurrentUser(likedPostUuids.contains(post.getUuid()));
+        dto.setLikeCount(likeCounts.getOrDefault(post.getUuid(), 0L).intValue());
 
         if (post.getParentPost() != null) {
             dto.setParentPostUuid(post.getParentPost().getUuid());
@@ -376,7 +414,7 @@ public class PostServiceImpl implements PostService {
         if (recursionDepth > 0 && commentList != null && !commentList.isEmpty()) {
             List<PostResponseDTO> commentDTOs = new ArrayList<>();
             for (Post comment : commentList) {
-                commentDTOs.add(mapPostToResponseDTO(comment, currentUser, recursionDepth - 1));
+                commentDTOs.add(mapPostToResponseDTO(comment, currentUser, recursionDepth - 1, likeCounts, likedPostUuids));
             }
             dto.setComments(commentDTOs);
         }
