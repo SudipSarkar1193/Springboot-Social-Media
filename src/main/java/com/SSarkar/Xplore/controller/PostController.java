@@ -1,9 +1,7 @@
 package com.SSarkar.Xplore.controller;
 
-import com.SSarkar.Xplore.dto.post.CommentRequestDTO;
-import com.SSarkar.Xplore.dto.post.CreatePostRequestDTO;
-import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
-import com.SSarkar.Xplore.dto.post.PostResponseDTO;
+import com.SSarkar.Xplore.dto.post.*;
+import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.service.contract.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +60,18 @@ public class PostController {
             @AuthenticationPrincipal UserDetails currentUser) {
         postService.deletePost(uuid, currentUser);
         return ResponseEntity.noContent().build();
+    }
+    
+    @PutMapping("/{uuid}")
+    public ResponseEntity<HashMap<String, String>> updatePost(
+            @PathVariable UUID uuid,
+            @AuthenticationPrincipal UserDetails currentUser,
+            @RequestBody PostUpdateDTO postUpdateDTO
+    ){
+        postService.updatePost(currentUser,uuid,postUpdateDTO);
+        HashMap<String, String> map = new HashMap<>();
+        map.put("message", "Post updated successfully!!");
+        return ResponseEntity.ok(map);
     }
 
     @PostMapping("/{postUuid}/like")

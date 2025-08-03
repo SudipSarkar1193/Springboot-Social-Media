@@ -199,7 +199,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
-    public Post updatePost(UserDetails currentUser, UUID postUuid, PostUpdateDTO postUpdateDTO) {
+    public void updatePost(UserDetails currentUser, UUID postUuid, PostUpdateDTO postUpdateDTO) {
         User user = userRepository.findByUsername(currentUser.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -257,7 +257,7 @@ public class PostServiceImpl implements PostService {
         post.setUpdatedAt(Instant.now()); //Instant.now() for better precision
         Post updatedPost = postRepository.save(post);
         log.info("Post with UUID: {} updated successfully by user: {}", postUuid, user.getUsername());
-        return updatedPost;
+
 
     }
     @Override

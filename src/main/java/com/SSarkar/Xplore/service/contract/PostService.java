@@ -16,7 +16,7 @@ public interface PostService {
 
     void deletePost(UUID uuid, UserDetails currentUser);
 
-    Post updatePost(UserDetails currentUser , UUID postUuid, PostUpdateDTO postUpdateDTO);
+    void updatePost(UserDetails currentUser , UUID postUuid, PostUpdateDTO postUpdateDTO);
 
     PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUser);
 
