@@ -3,8 +3,13 @@ package com.SSarkar.Xplore.repository;
 import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public interface FollowRepository extends JpaRepository<Follow,Long> {
 
@@ -28,4 +33,7 @@ public interface FollowRepository extends JpaRepository<Follow,Long> {
      * @return An Optional containing the Follow if it exists, otherwise an empty Optional.
      */
     Optional<Follow> findByFollowerAndFollowee(User follower, User followee);
+
+    @Query("SELECT f.followee.uuid FROM Follow f WHERE f.follower = :currentUser AND f.followee IN :users")
+    Set<UUID> findFollowingUuidsByCurrentUserAndUsers(@Param("currentUser") User currentUser, @Param("users") List<User> users);
 }
