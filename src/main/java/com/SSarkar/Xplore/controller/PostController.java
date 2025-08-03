@@ -74,6 +74,16 @@ public class PostController {
         return ResponseEntity.ok(map);
     }
 
+    @PutMapping("/{uuid}/increase-share-count")
+    public ResponseEntity<HashMap<String, String>> increaseShareCount(
+            @PathVariable UUID uuid
+    ){
+        String msg = postService.increaseShareCount(uuid);
+        HashMap<String, String> map = new HashMap<>();
+        map.put("message", msg);
+        return ResponseEntity.ok(map);
+    }
+
     @PostMapping("/{postUuid}/like")
     public ResponseEntity<HashMap<String, String>> likePost(
             @PathVariable UUID postUuid,

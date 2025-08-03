@@ -27,7 +27,8 @@ public class PostResponseDTO {
     // --- NEW Fields for Comments ---
     private UUID parentPostUuid;
     private List<PostResponseDTO> comments; // A list of nested comments
-    private int commentCount;
+    private long commentCount;
+    private long shareCount ;
 
     // --- NEW Fields for Likes ---
     private int likeCount;

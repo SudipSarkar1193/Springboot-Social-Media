@@ -27,4 +27,9 @@ public interface PostService {
     void unlikePost(UUID postUuid, UserDetails currentUser);
 
     PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID userUuid, Pageable pageable);
+
+    String increaseShareCount(UUID postUuid);
+
+
+
 }

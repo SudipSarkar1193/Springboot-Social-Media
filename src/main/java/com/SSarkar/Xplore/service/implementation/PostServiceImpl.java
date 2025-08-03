@@ -318,6 +318,17 @@ public class PostServiceImpl implements PostService {
         );
     }
 
+    @Override
+    public String increaseShareCount(UUID postUuid) {
+
+        Post post = postRepository.findByUuid(postUuid).orElseThrow(()->new ResourceNotFoundException("Post not found with UUID: " + postUuid));
+
+        post.setShareCount(post.getShareCount() + 1);
+        postRepository.save(post);
+
+        return "incremented shareCount to " + post.getShareCount();
+    }
+
     // --- HELPER METHODS ---
 
     private User getCurrentUserOrNull(UserDetails userDetails) {
@@ -338,6 +349,7 @@ public class PostServiceImpl implements PostService {
         dto.setImageUrls(post.getImageUrls());
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
+        dto.setShareCount(post.getShareCount());
 
         if(post.getAuthor().getUserProfile() !=null && post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
             dto.setAuthorProfilePictureUrl(post.getAuthor().getUserProfile().getProfilePictureUrl());

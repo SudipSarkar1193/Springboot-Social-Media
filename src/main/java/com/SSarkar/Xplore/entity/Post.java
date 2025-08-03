@@ -42,6 +42,8 @@ public class Post {
     @UpdateTimestamp
     private Instant updatedAt;
 
+    private long shareCount = 0 ;//DEFAULT val = 0
+
     // --- Relationships ---
 
     @ManyToOne(fetch = FetchType.LAZY)
