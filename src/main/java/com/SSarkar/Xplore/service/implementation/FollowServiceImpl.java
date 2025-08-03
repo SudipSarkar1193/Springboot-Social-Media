@@ -1,6 +1,5 @@
 package com.SSarkar.Xplore.service.implementation;
 
-import com.SSarkar.Xplore.dto.follow.FollowerDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
@@ -18,17 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-
 public class FollowServiceImpl implements FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository ;
     private final NotificationService notificationService;
+    private final UserServiceImpl userServiceImpl;
+
 
     @Override
     @Transactional
@@ -44,7 +46,6 @@ public class FollowServiceImpl implements FollowService {
             throw new IllegalArgumentException("You cannot follow yourself.");
         }
 
-        // Check if the follower is already following the followee
         if (followRepository.findByFollowerAndFollowee(follower, followee).isPresent()) {
             unfollowUser(follower, followee);
             log.info("User {} is already following {}, so unfollowing them now.",
@@ -84,21 +85,26 @@ public class FollowServiceImpl implements FollowService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponseDTO> getFollowers(UUID userUuid,UserDetails currentUserDetails) {
-        User user = (User)userRepository.findByUuid(userUuid)
+    public List<UserResponseDTO> getFollowers(UUID userUuid, UserDetails currentUserDetails) {
+        User user = (User) userRepository.findByUuid(userUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
 
-        // Create a new list to hold our DTOs
-        List<UserResponseDTO> followersList = new ArrayList<>();
-
-        // Loop through each 'Follow' relationship in the user's followers list
+        List<User> followers = new ArrayList<>();
         for (Follow follow : user.getFollowers()) {
-            User followerUser = follow.getFollower();
+            followers.add(follow.getFollower());
+        }
 
-            // Create a new DTO and add it to our list
-            followersList.add(
-                    mapUserToResponse(followerUser,isFollowing(followerUser,currentUserDetails))
-            );
+        User currentUser = userRepository.findByUsername(currentUserDetails.getUsername()).orElse(null);
+
+        // Fetch following status in bulk
+        Set<UUID> followingUuids = (currentUser != null)
+                ? followRepository.findFollowingUuidsByCurrentUserAndUsers(currentUser, followers)
+                : Set.of();
+
+        List<UserResponseDTO> followersList = new ArrayList<>();
+        for (User follower : followers) {
+            boolean isFollowing = followingUuids.contains(follower.getUuid());
+            followersList.add(userServiceImpl.mapUserToResponse(follower, isFollowing));
         }
 
         return followersList;
@@ -106,63 +112,29 @@ public class FollowServiceImpl implements FollowService {
 
 
     @Override
-    public List<UserResponseDTO> getFollowing(UUID userUuid,UserDetails currentUserDetails) {
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getFollowing(UUID userUuid, UserDetails currentUserDetails) {
         User user = (User) userRepository.findByUuid(userUuid)
-                .orElseThrow(()-> new ResourceNotFoundException("User not found with UUID: " + userUuid));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
 
-        // Create a new list to hold our DTOs
-        List<UserResponseDTO> followingList = new ArrayList<>();
-
-        // Loop through each 'Follow' relationship in the user's following list
-        for(Follow follow : user.getFollowing()){
-            User followeeUser = follow.getFollowee();
-
-
-            // Create a new DTO and add it to our list
-            followingList.add(
-                    mapUserToResponse(followeeUser,isFollowing(followeeUser,currentUserDetails))
-            );
+        List<User> following = new ArrayList<>();
+        for (Follow follow : user.getFollowing()) {
+            following.add(follow.getFollowee());
         }
 
-        return  followingList;
-    }
-
-
-    UserResponseDTO mapUserToResponse(User user,boolean isFollowing ) {
-        UserResponseDTO userResponse = new UserResponseDTO();
-        userResponse.setUuid(user.getUuid());
-        userResponse.setUsername(user.getUsername());
-        userResponse.setEmail(user.getEmail());
-        userResponse.setFollowersCount(user.getFollowers().size());
-        userResponse.setFollowingCount(user.getFollowing().size());
-        userResponse.setPostCount(user.getPosts().size());
-        userResponse.setCurrentUserFollowing(isFollowing);
-
-        if (user.getUserProfile() != null) {
-            userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
-            userResponse.setBio(user.getUserProfile().getBio());
-            userResponse.setFullName(user.getUserProfile().getFullName());
-        }
-
-        return userResponse;
-    }
-
-    private boolean isFollowing(User user , UserDetails currentUserDetails){
-        // If there's no logged-in user, they can't be following anyone.
-        if (currentUserDetails == null) {
-            return false;
-        }
-
-        // Fetch the current user.
         User currentUser = userRepository.findByUsername(currentUserDetails.getUsername()).orElse(null);
 
-        // If the current user can't be found, or they are looking at their own profile, return false.
-        if (currentUser == null || currentUser.getId().equals(user.getId())) {
-            return false;
+        // Fetch following status in bulk
+        Set<UUID> followingUuids = (currentUser != null)
+                ? followRepository.findFollowingUuidsByCurrentUserAndUsers(currentUser, following)
+                : Set.of();
+
+        List<UserResponseDTO> followingList = new ArrayList<>();
+        for (User followee : following) {
+            boolean isFollowing = followingUuids.contains(followee.getUuid());
+            followingList.add(userServiceImpl.mapUserToResponse(followee, isFollowing));
         }
 
-        Follow follow = followRepository.findByFollowerAndFollowee(currentUser, user).orElse(null);
-
-        return follow != null ;
+        return followingList;
     }
 }
