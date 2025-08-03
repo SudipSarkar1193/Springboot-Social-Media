@@ -56,9 +56,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findTopUsersNotFollowedBy(@Param("uuid") UUID uuid, Pageable pageable);
 
     @Query("""
-    SELECT u FROM User u 
-    WHERE u.uuid <> :uuid 
+    SELECT u FROM User u
+    WHERE u.uuid <> :uuid
     ORDER BY u.createdAt DESC
     """)
     List<User> findAllUsersExceptForCurrentUser(@Param("uuid") UUID uuid, Pageable pageable);
+
+    @Query("SELECT COUNT(f) FROM Follow f WHERE f.followee = :user")
+    int countFollowers(@Param("user") User user);
+
+    @Query("SELECT COUNT(f) FROM Follow f WHERE f.follower = :user")
+    int countFollowing(@Param("user") User user);
+
+    @Query("SELECT COUNT(p) FROM Post p WHERE p.author = :user")
+    int countPosts(@Param("user") User user);
 }
