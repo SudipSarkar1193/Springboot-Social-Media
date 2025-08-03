@@ -49,7 +49,9 @@ public class Post {
     @ToString.Exclude
     private User author;
 
-    // --- NEW: Recursive Relationship ---
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<Like> likes = new ArrayList<>();
 
     /**
      * This is the parent post that this post is a comment on.
