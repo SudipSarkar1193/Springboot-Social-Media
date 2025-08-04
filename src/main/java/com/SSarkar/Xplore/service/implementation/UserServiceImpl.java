@@ -92,20 +92,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, int limit) {
+    public PagedResponseDTO<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, Pageable pageable) {
         User currentUser = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
 
-        Pageable pageable = PageRequest.of(0, limit);
-        List<User> suggestedUsers = userRepository.findTopUsersNotFollowedBy(currentUser.getUuid(), pageable);
+        Page<User> suggestedUsersPage = userRepository.findTopUsersNotFollowedBy(currentUser.getUuid(), pageable);
 
-        List<UserResponseDTO> userResponseDTOList = new ArrayList<>(suggestedUsers.size());
-        for( User user : suggestedUsers) {
-            UserResponseDTO userResponse = mapUserToResponse(user,false);
-            userResponseDTOList.add(userResponse) ;
-        }
+        List<UserResponseDTO> userResponseDTOList = suggestedUsersPage.getContent().stream()
+                .map(user -> mapUserToResponse(user, false))
+                .collect(Collectors.toList());
 
-        return userResponseDTOList;
+        return new PagedResponseDTO<>(
+                userResponseDTOList,
+                suggestedUsersPage.getNumber(),
+                suggestedUsersPage.getTotalPages(),
+                suggestedUsersPage.getTotalElements(),
+                suggestedUsersPage.isLast()
+        );
     }
 
     @Override

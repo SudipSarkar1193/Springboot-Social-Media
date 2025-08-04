@@ -16,7 +16,7 @@ public interface UserService {
 
     UserResponseDTO updateUserProfile(UserDetails currentUserDetails, @Valid UserProfileUpdateDTO updateDTO);
 
-    List<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, int limit);
+    PagedResponseDTO<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, Pageable pageable);
 
     PagedResponseDTO<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable);
 }

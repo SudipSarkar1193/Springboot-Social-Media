@@ -51,11 +51,15 @@ public class UserController {
     }
 
     @GetMapping("/suggestions")
-    public ResponseEntity<List<UserResponseDTO>> getSuggestedUsers(
+    public ResponseEntity<PagedResponseDTO<UserResponseDTO>> getSuggestedUsers(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(value = "limit", defaultValue = "10") int limit
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
-        List<UserResponseDTO> suggestedUsers = userService.getSuggestedUsers(userDetails, limit);
+        PagedResponseDTO<UserResponseDTO> suggestedUsers = userService.getSuggestedUsers(
+                userDetails,
+                PageRequest.of(page, size)
+        );
         return ResponseEntity.ok(suggestedUsers);
     }
 
