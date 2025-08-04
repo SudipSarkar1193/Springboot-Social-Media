@@ -1,7 +1,6 @@
 package com.SSarkar.Xplore.controller;
 
 import com.SSarkar.Xplore.dto.post.*;
-import com.SSarkar.Xplore.entity.Post;
 import com.SSarkar.Xplore.service.contract.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

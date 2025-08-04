@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.service.implementation;
 
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.entity.Follow;
 import com.SSarkar.Xplore.entity.User;
@@ -11,6 +12,8 @@ import com.SSarkar.Xplore.service.contract.FollowService;
 import com.SSarkar.Xplore.service.contract.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,56 +88,67 @@ public class FollowServiceImpl implements FollowService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponseDTO> getFollowers(UUID userUuid, UserDetails currentUserDetails) {
+    public PagedResponseDTO<UserResponseDTO> getFollowers(UUID userUuid, UserDetails currentUserDetails, Pageable pageable) {
         User user = (User) userRepository.findByUuid(userUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
 
-        List<User> followers = new ArrayList<>();
-        for (Follow follow : user.getFollowers()) {
-            followers.add(follow.getFollower());
-        }
+        Page<Follow> followerPage = followRepository.findByFollowee(user, pageable);
+        List<User> followers = followerPage.getContent().stream()
+                .map(Follow::getFollower)
+                .collect(Collectors.toList());
 
         User currentUser = userRepository.findByUsername(currentUserDetails.getUsername()).orElse(null);
 
-        // Fetch following status in bulk
         Set<UUID> followingUuids = (currentUser != null)
                 ? followRepository.findFollowingUuidsByCurrentUserAndUsers(currentUser, followers)
                 : Set.of();
 
-        List<UserResponseDTO> followersList = new ArrayList<>();
-        for (User follower : followers) {
-            boolean isFollowing = followingUuids.contains(follower.getUuid());
-            followersList.add(userServiceImpl.mapUserToResponse(follower, isFollowing));
-        }
+        List<UserResponseDTO> followersList = followers.stream()
+                .map(follower -> {
+                    boolean isFollowing = followingUuids.contains(follower.getUuid());
+                    return userServiceImpl.mapUserToResponse(follower, isFollowing);
+                })
+                .collect(Collectors.toList());
 
-        return followersList;
+        return new PagedResponseDTO<>(
+                followersList,
+                followerPage.getNumber(),
+                followerPage.getTotalPages(),
+                followerPage.getTotalElements(),
+                followerPage.isLast()
+        );
     }
-
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponseDTO> getFollowing(UUID userUuid, UserDetails currentUserDetails) {
+    public PagedResponseDTO<UserResponseDTO> getFollowing(UUID userUuid, UserDetails currentUserDetails, Pageable pageable) {
         User user = (User) userRepository.findByUuid(userUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with UUID: " + userUuid));
 
-        List<User> following = new ArrayList<>();
-        for (Follow follow : user.getFollowing()) {
-            following.add(follow.getFollowee());
-        }
+        Page<Follow> followingPage = followRepository.findByFollower(user, pageable);
+        List<User> following = followingPage.getContent().stream()
+                .map(Follow::getFollowee)
+                .collect(Collectors.toList());
 
         User currentUser = userRepository.findByUsername(currentUserDetails.getUsername()).orElse(null);
 
-        // Fetch following status in bulk
         Set<UUID> followingUuids = (currentUser != null)
                 ? followRepository.findFollowingUuidsByCurrentUserAndUsers(currentUser, following)
                 : Set.of();
 
-        List<UserResponseDTO> followingList = new ArrayList<>();
-        for (User followee : following) {
-            boolean isFollowing = followingUuids.contains(followee.getUuid());
-            followingList.add(userServiceImpl.mapUserToResponse(followee, isFollowing));
-        }
+        List<UserResponseDTO> followingList = following.stream()
+                .map(followee -> {
+                    boolean isFollowing = followingUuids.contains(followee.getUuid());
+                    return userServiceImpl.mapUserToResponse(followee, isFollowing);
+                })
+                .collect(Collectors.toList());
 
-        return followingList;
+        return new PagedResponseDTO<>(
+                followingList,
+                followingPage.getNumber(),
+                followingPage.getTotalPages(),
+                followingPage.getTotalElements(),
+                followingPage.isLast()
+        );
     }
 }

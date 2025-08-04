@@ -1,16 +1,18 @@
 package com.SSarkar.Xplore.controller;
 
-import com.SSarkar.Xplore.dto.follow.FollowerDTO;
+
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.service.contract.FollowService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -30,13 +32,19 @@ public class FollowController {
     }
 
     @GetMapping("/followers")
-    public ResponseEntity<List<UserResponseDTO>> getFollowers(@PathVariable UUID uuid,@AuthenticationPrincipal UserDetails currentUser) {
-        return ResponseEntity.ok(followService.getFollowers(uuid,currentUser));
+    public ResponseEntity<PagedResponseDTO<UserResponseDTO>> getFollowers(
+            @PathVariable UUID uuid,
+            @AuthenticationPrincipal UserDetails currentUser,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable) {
+        return ResponseEntity.ok(followService.getFollowers(uuid, currentUser, pageable));
     }
 
     @GetMapping("/following")
-    public ResponseEntity<List<UserResponseDTO>> getFollowing(@PathVariable UUID uuid, @AuthenticationPrincipal UserDetails currentUser) {
-        return ResponseEntity.ok(followService.getFollowing(uuid,currentUser));
+    public ResponseEntity<PagedResponseDTO<UserResponseDTO>> getFollowing(
+            @PathVariable UUID uuid,
+            @AuthenticationPrincipal UserDetails currentUser,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable) {
+        return ResponseEntity.ok(followService.getFollowing(uuid, currentUser, pageable));
     }
 
 }
