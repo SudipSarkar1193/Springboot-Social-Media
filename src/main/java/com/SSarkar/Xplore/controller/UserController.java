@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.controller;
 
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.user.UserProfileUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.service.contract.UserService;
@@ -27,17 +28,18 @@ public class UserController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<UserResponseDTO>> getAllUsers(
+    public ResponseEntity<PagedResponseDTO<UserResponseDTO>> getAllUsers(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size
     ) {
-        List<UserResponseDTO> users = userService.getAllUsers(
+        PagedResponseDTO<UserResponseDTO> users = userService.getAllUsers(
                 userDetails,
                 PageRequest.of(page, size)
         );
         return ResponseEntity.ok(users);
     }
+
 
     @GetMapping("/profile/{username}")
     public ResponseEntity<UserResponseDTO> getUserByUsername(

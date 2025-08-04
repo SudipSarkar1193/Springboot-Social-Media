@@ -1,6 +1,7 @@
 package com.SSarkar.Xplore.repository;
 
 import com.SSarkar.Xplore.entity.User;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -60,7 +61,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     WHERE u.uuid <> :uuid
     ORDER BY u.createdAt DESC
     """)
-    List<User> findAllUsersExceptForCurrentUser(@Param("uuid") UUID uuid, Pageable pageable);
+    Page<User> findAllUsersExceptForCurrentUser(@Param("uuid") UUID uuid, Pageable pageable);
+
 
     @Query("SELECT COUNT(f) FROM Follow f WHERE f.followee = :user")
     int countFollowers(@Param("user") User user);

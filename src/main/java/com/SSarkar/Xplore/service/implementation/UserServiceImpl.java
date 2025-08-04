@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.service.implementation;
 
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.user.UserProfileUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.entity.User;
@@ -10,6 +11,7 @@ import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.CloudinaryService;
 import com.SSarkar.Xplore.service.contract.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.stream.Collectors;
 
 
 @Service
@@ -107,20 +109,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable) {
+    public PagedResponseDTO<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable) {
         User currentUser = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
 
         // Fetch all users except the current user
-        List<User> users = userRepository.findAllUsersExceptForCurrentUser(currentUser.getUuid(), pageable);
+        Page<User> userPage = userRepository.findAllUsersExceptForCurrentUser(currentUser.getUuid(), pageable);
 
-        List<UserResponseDTO> userResponseDTOList = new ArrayList<>(users.size());
-        for (User user : users) {
-            UserResponseDTO userResponse = mapUserToResponse(user,isFollowing(user,userDetails));
-            userResponseDTOList.add(userResponse);
-        }
+        List<UserResponseDTO> userResponseDTOList = userPage.getContent().stream()
+                .map(user -> mapUserToResponse(user, isFollowing(user, userDetails)))
+                .collect(Collectors.toList());
 
-        return userResponseDTOList;
+        return new PagedResponseDTO<>(
+                userResponseDTOList,
+                userPage.getNumber(),
+                userPage.getTotalPages(),
+                userPage.getTotalElements(),
+                userPage.isLast()
+        );
     }
 
     UserResponseDTO mapUserToResponse(User user,boolean isFollowing ) {

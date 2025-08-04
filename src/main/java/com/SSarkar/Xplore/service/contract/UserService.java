@@ -1,5 +1,6 @@
 package com.SSarkar.Xplore.service.contract;
 
+import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.dto.user.UserProfileUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import jakarta.validation.Valid;
@@ -17,5 +18,5 @@ public interface UserService {
 
     List<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, int limit);
 
-    List<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable);
+    PagedResponseDTO<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable);
 }
