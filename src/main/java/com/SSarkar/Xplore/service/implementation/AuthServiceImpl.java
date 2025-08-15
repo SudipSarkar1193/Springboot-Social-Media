@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.util.Random;
 
 
 @Slf4j
@@ -39,77 +40,89 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public UserResponseDTO registerUser(UserRegistrationRequestDTO registrationRequest) {
-        log.debug("Attempting to register user with username: {} and email: {}",
-                registrationRequest.getUsername(), registrationRequest.getEmail());
+        log.debug("Attempting to register user with firstname: {} and email: {}",
+                registrationRequest.getFirstName(), registrationRequest.getEmail());
 
-        // 1. Check if username or email already exists
-        if (userRepository.existsByUsername(registrationRequest.getUsername())) {
-            log.warn("Registration failed: Username '{}' is already taken", registrationRequest.getUsername());
-            throw new IllegalStateException("Username is already taken");
-        }
+        // 1. Check if email already exists
         if (userRepository.existsByEmail(registrationRequest.getEmail())) {
             log.warn("Registration failed: Email '{}' is already in use", registrationRequest.getEmail());
             throw new IllegalStateException("Email is already in use");
         }
 
-        // 2. Create a new User entity
+        // 2. Generate a unique username from firstName & lastName
+        String uniqueUsername = generateUniqueUsername(
+                registrationRequest.getFirstName(),
+                registrationRequest.getLastName()
+        );
+
+        // 3. Create a new User entity
         User user = new User();
-        user.setUsername(registrationRequest.getUsername());
+        user.setUsername(uniqueUsername);
         user.setEmail(registrationRequest.getEmail());
 
+        // 4. User profile setup
         UserProfile userProfile = new UserProfile();
 
-
         if (registrationRequest.isProfilePictureUrlValid()) {
-
-            String url = null;
-
             try {
-                url = cloudinaryService.upload(registrationRequest.getProfilePictureUrl());
+                String url = cloudinaryService.upload(registrationRequest.getProfilePictureUrl());
+                userProfile.setProfilePictureUrl(url);
+                log.debug("Profile picture URL set: {}", url);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Error uploading profile picture", e);
             }
-
-            userProfile.setProfilePictureUrl(url);
-
-            log.debug("Profile picture URL set: {}", registrationRequest.getProfilePictureUrl());
-        }else{
-            //https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png
-            userProfile.setProfilePictureUrl("https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png");
+        } else {
+            userProfile.setProfilePictureUrl(
+                    "https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png"
+            );
             log.debug("Profile picture URL set with default url");
         }
 
-        if(registrationRequest.getFullName() != null && !registrationRequest.getFullName().isEmpty()) {
-            userProfile.setFullName(registrationRequest.getFullName());
-            log.debug("Full name set: {}", registrationRequest.getFullName());
-
-        }
-
+        // 5. Build full name from firstName + lastName
+        String fullName = registrationRequest.getFirstName() + " " + registrationRequest.getLastName();
+        userProfile.setFullName(fullName);
+        log.debug("Full name set: {}", fullName);
 
         user.setUserProfile(userProfile);
 
-        // 3. Encode the password before saving
+        // 6. Encode password
         String encodedPassword = passwordEncoder.encode(registrationRequest.getPassword());
         user.setPassword(encodedPassword);
         log.debug("Password encoded successfully");
 
-        // 4. Save the new user to the database
+        // 7. Save user
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with UUID: {}", savedUser.getUuid());
 
-        // 5. Map the saved user to a response DTO (excluding password)
+        // 8. Map saved user to response DTO
         UserResponseDTO userResponse = new UserResponseDTO();
         userResponse.setUuid(savedUser.getUuid());
         userResponse.setUsername(savedUser.getUsername());
         userResponse.setEmail(savedUser.getEmail());
-
-        if (savedUser.getUserProfile() != null) {
-            userResponse.setProfilePictureUrl(savedUser.getUserProfile().getProfilePictureUrl());
-        } else {
-            userResponse.setProfilePictureUrl(null);
-        }
+        userResponse.setProfilePictureUrl(
+                savedUser.getUserProfile() != null
+                        ? savedUser.getUserProfile().getProfilePictureUrl()
+                        : null
+        );
 
         return userResponse;
+    }
+
+    private String generateUniqueUsername(String firstName, String lastName) {
+        String baseUsername = (firstName + lastName)
+                .toLowerCase()
+                .replaceAll("\\s+", ""); // Remove spaces
+
+        String uniqueUsername = baseUsername;
+
+        // If username already exists, append a random number to make it unique
+        Random random = new Random();
+        while (userRepository.existsByUsername(uniqueUsername)) {
+            int randomNumber = 100 + random.nextInt(9000); // random number between 100 and 9099
+            uniqueUsername = baseUsername + randomNumber;
+        }
+
+        return uniqueUsername;
     }
 
     @Override

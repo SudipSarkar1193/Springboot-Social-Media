@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -46,6 +47,10 @@ public class SecurityConfig {
 
                 // 2. exception handling for unauthorized access
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+
+                // FIX 1: Setting session management to STATELESS
+                // This is crucial for REST APIs that use tokens for authentication.
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // 3. Define authorization rules
                 .authorizeHttpRequests(authorize -> authorize
