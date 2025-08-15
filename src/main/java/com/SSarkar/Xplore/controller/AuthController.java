@@ -8,18 +8,20 @@ import com.SSarkar.Xplore.service.contract.OtpService;
 import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
-@RequestMapping("/api/auth") // Base path for all endpoints in this controller
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
-
 
     private final OtpService otpService;
     private final EmailService emailService;
@@ -30,9 +32,7 @@ public class AuthController {
             @Valid @RequestBody UserRegistrationRequestDTO registrationRequest) {
 
         if (!isValidEmail(registrationRequest.getEmail())) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Invalid email format");
-            return ResponseEntity.badRequest().body(errorResponse);
+            return buildErrorResponse("Invalid email format", HttpStatus.BAD_REQUEST);
         }
 
         String otp = otpService.generateAndStoreOtp(registrationRequest.getEmail(), registrationRequest);
@@ -40,16 +40,14 @@ public class AuthController {
         try {
             emailService.sendOtpEmail(registrationRequest.getEmail(), otp);
         } catch (MessagingException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Error sending OTP");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            return buildErrorResponse("Error sending OTP", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        Map<String, String> successResponse = new HashMap<>();
-        successResponse.put("message", "OTP sent to your email. Please verify to complete registration");
-        return ResponseEntity.ok(successResponse);
+        return buildSuccessResponse(
+                "OTP sent to your email. Please verify to complete registration",
+                HttpStatus.OK
+        );
     }
-
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> authenticateUser(@Valid @RequestBody LoginRequestDTO loginRequest) {
@@ -58,50 +56,73 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<Object> verifyOtp(@RequestBody VerifyOtpRequestDTO request) {
+    public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtpRequestDTO request) {
+        log.info("Received OTP verification request for email: {}", request.getEmail());
+
         String cachedOtp = otpService.getOtp(request.getEmail());
+        log.debug("Cached OTP from service: {}", cachedOtp);
 
         if (cachedOtp != null && cachedOtp.equals(request.getOtp())) {
-            UserRegistrationRequestDTO registrationRequest = otpService.getRegistrationRequest(request.getEmail());
+            log.info("OTP match successful for email: {}", request.getEmail());
 
+            UserRegistrationRequestDTO registrationRequest = otpService.getRegistrationRequest(request.getEmail());
             if (registrationRequest == null) {
-                return ResponseEntity.badRequest().body("Registration data expired or not found");
+                log.warn("Registration data expired or not found for email: {}", request.getEmail());
+                return buildErrorResponse("Registration data expired or not found", HttpStatus.BAD_REQUEST);
             }
 
+            log.debug("Registration request data found for email: {}", request.getEmail());
             otpService.clearOtp(request.getEmail());
+            log.info("Cleared OTP from cache for email: {}", request.getEmail());
 
             UserResponseDTO createdUser = authService.registerUser(registrationRequest);
+            log.info("User registered successfully: {}", createdUser);
+
             return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+
+        } else if (!Objects.equals(cachedOtp, request.getOtp())) {
+            log.warn("Incorrect OTP entered for email: {} | Provided OTP: {}", request.getEmail(), request.getOtp());
+            return buildErrorResponse("Incorrect OTP", HttpStatus.BAD_REQUEST);
         } else {
-            return ResponseEntity.badRequest().body("Invalid or expired OTP");
+            log.warn("Invalid or expired OTP for email: {}", request.getEmail());
+            return buildErrorResponse("Invalid or expired OTP", HttpStatus.BAD_REQUEST);
         }
     }
 
-
     @PostMapping("/resend-otp")
-    public ResponseEntity<String> resendOtp(@RequestBody RegisterRequestDTO request) {
-        // Get existing registration data
+    public ResponseEntity<Map<String, String>> resendOtp(@RequestBody VerifyOtpRequestDTO request) {
         UserRegistrationRequestDTO registrationRequest = otpService.getRegistrationRequest(request.getEmail());
 
         if (registrationRequest == null) {
-            return ResponseEntity.badRequest().body("No registration data found. Please start registration again.");
+            return buildErrorResponse("No registration data found. Please start registration again.", HttpStatus.BAD_REQUEST);
         }
 
-        // Generate new OTP while keeping existing registration data
         String newOtp = otpService.generateAndStoreOtp(request.getEmail(), registrationRequest);
 
         try {
             emailService.sendOtpEmail(request.getEmail(), newOtp);
         } catch (MessagingException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error sending OTP");
+            return buildErrorResponse("Error sending OTP", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return ResponseEntity.ok("A new OTP has been sent to your email");
+        return buildSuccessResponse("A new OTP has been sent to your email", HttpStatus.OK);
     }
-
 
     private boolean isValidEmail(String email) {
         String regex = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
         return email != null && email.matches(regex);
+    }
+
+    // ✅ Helper methods for consistent Map<String, String> responses
+    private ResponseEntity<Map<String, String>> buildErrorResponse(String message, HttpStatus status) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", message);
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    private ResponseEntity<Map<String, String>> buildSuccessResponse(String message, HttpStatus status) {
+        Map<String, String> successResponse = new HashMap<>();
+        successResponse.put("message", message);
+        return ResponseEntity.status(status).body(successResponse);
     }
 }

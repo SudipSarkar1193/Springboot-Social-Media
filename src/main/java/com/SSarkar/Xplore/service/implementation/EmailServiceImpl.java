@@ -39,22 +39,77 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private String buildOtpEmailContent(String otp) {
-        return String.format(
-                "<html>" +
-                        "<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">" +
-                        "<h2 style=\"color: #333; margin-bottom: 20px;\">Verification Code</h2>" +
-                        "<p style=\"margin-bottom: 15px;\">Please use the following verification code to complete your registration:</p>" +
-                        "<div style=\"background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; text-align: center; margin: 20px 0;\">" +
-                        "<h3 style=\"color: #333; margin: 0; font-size: 24px; letter-spacing: 3px;\">%s</h3>" +
-                        "</div>" +
-                        "<p style=\"margin-bottom: 15px;\">This code will expire in 5 minutes for security purposes.</p>" +
-                        "<hr style=\"border: none; border-top: 1px solid #e9ecef; margin: 20px 0;\">" +
-                        "<p style=\"font-size: 14px; color: #666; margin: 0;\">" +
-                        "If you did not request this verification code, please ignore this email." +
-                        "</p>" +
-                        "</body>" +
-                        "</html>",
-                otp
-        );
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background-color: #f4f4f4;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: 30px auto;
+                        background-color: #ffffff;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                    .header {
+                        background-color: #4CAF50;
+                        padding: 20px;
+                        text-align: center;
+                        color: #ffffff;
+                        font-size: 20px;
+                        font-weight: bold;
+                    }
+                    .content {
+                        padding: 30px;
+                        color: #333333;
+                        line-height: 1.6;
+                    }
+                    .otp-box {
+                        background-color: #f1f1f1;
+                        border: 1px solid #dddddd;
+                        padding: 15px;
+                        text-align: center;
+                        font-size: 24px;
+                        font-weight: bold;
+                        letter-spacing: 3px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }
+                    .footer {
+                        background-color: #f9f9f9;
+                        padding: 15px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #777777;
+                        border-top: 1px solid #eeeeee;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">Xplore Verification</div>
+                    <div class="content">
+                        <p>Hi,</p>
+                        <p>Use the following verification code to complete your registration on <strong>Xplore</strong>:</p>
+                        <div class="otp-box">%s</div>
+                        <p>This code will expire in <strong>5 minutes</strong> for security purposes.</p>
+                        <p>If you did not request this code, please ignore this email.</p>
+                    </div>
+                    <div class="footer">
+                        &copy; %d Xplore. All rights reserved.
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, otp, java.time.Year.now().getValue());
     }
 }
