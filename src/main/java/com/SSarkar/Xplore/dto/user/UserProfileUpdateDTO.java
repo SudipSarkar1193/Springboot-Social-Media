@@ -10,7 +10,7 @@ public class UserProfileUpdateDTO {
     @Size(max = 50, message = "Full name cannot exceed 50 characters.")
     private String fullName;
 
-    @Size(max =320 ,message = "Bio cannot exceed 200 characters.")
+    @Size(max =320 ,message = "Bio cannot exceed 320 characters.")
     private String bio;
 
     private String profileImageUrl;
