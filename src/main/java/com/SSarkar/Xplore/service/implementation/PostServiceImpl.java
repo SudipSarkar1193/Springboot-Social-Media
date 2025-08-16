@@ -409,7 +409,7 @@ public class PostServiceImpl implements PostService {
         }
 
         List<Post> commentList = post.getComments();
-        dto.setCommentCount(commentList != null ? commentList.size() : 0);
+        dto.setCommentCount(countNestedComments(post));
 
         if (recursionDepth > 0 && commentList != null && !commentList.isEmpty()) {
             List<PostResponseDTO> commentDTOs = new ArrayList<>();
@@ -420,5 +420,17 @@ public class PostServiceImpl implements PostService {
         }
 
         return dto;
+    }
+
+    private long countNestedComments(Post post) {
+        if (post == null || post.getComments() == null || post.getComments().isEmpty()) {
+            return 0;
+        }
+
+        long count = post.getComments().size();
+        for (Post comment : post.getComments()) {
+            count += countNestedComments(comment);
+        }
+        return count;
     }
 }
