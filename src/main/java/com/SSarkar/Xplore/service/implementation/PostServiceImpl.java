@@ -195,6 +195,21 @@ public class PostServiceImpl implements PostService {
         );
     }
 
+    // Add this helper method to your PostServiceImpl class
+    private List<Post> collectAllPostsIncludingComments(Post post) {
+        List<Post> allPosts = new ArrayList<>();
+        allPosts.add(post);
+
+        if (post.getComments() != null && !post.getComments().isEmpty()) {
+            for (Post comment : post.getComments()) {
+                allPosts.addAll(collectAllPostsIncludingComments(comment));
+            }
+        }
+
+        return allPosts;
+    }
+
+
     @Override
     @Transactional(readOnly = true)
     public PostResponseDTO getPostByUuid(UUID uuid, UserDetails currentUserDetails) {
@@ -202,13 +217,18 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid));
         User currentUser = getCurrentUserOrNull(currentUserDetails);
 
-        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(List.of(post)).stream()
+        // ✅ Collect ALL posts (parent + all nested comments)
+        List<Post> allPosts = collectAllPostsIncludingComments(post);
+
+        // ✅ Calculate like counts for ALL posts
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(allPosts).stream()
                 .collect(Collectors.toMap(
                         result -> (UUID) result.get("postUuid"),
                         result -> (Long) result.get("likeCount")));
 
+        // ✅ Calculate liked status for ALL posts
         Set<UUID> likedPostUuids = (currentUser != null)
-                ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, List.of(post))
+                ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, allPosts)
                 : Collections.emptySet();
 
         return mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids);
