@@ -11,7 +11,10 @@ RUN mvn clean install -DskipTests
 
 # Stage 2: Create the final, smaller image
 FROM eclipse-temurin:21-jre-alpine
+# Setting the locale and character encoding for the container environment
+ENV LANG C.UTF-8
 WORKDIR /app
 COPY --from=build /app/target/Xplore-0.0.1-SNAPSHOT.jar /app/app.jar
 EXPOSE 8081
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Adding the file.encoding property to the java command to force the JVM to use UTF-8
+ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-jar", "app.jar"]
