@@ -28,7 +28,7 @@ public class Post {
     @Column(nullable = false, updatable = false, unique = true)
     private UUID uuid = UUID.randomUUID();
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "NVARCHAR(MAX)")
     private String content;
 
     @ElementCollection(fetch = FetchType.EAGER)
