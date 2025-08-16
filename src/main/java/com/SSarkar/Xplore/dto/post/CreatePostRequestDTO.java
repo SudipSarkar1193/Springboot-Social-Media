@@ -11,8 +11,6 @@ import java.util.List;
 @ToString
 public class CreatePostRequestDTO {
 
-
-    @Size(max = 320, message = "Content must be between 1 and 320 characters")
     private String content;
     private List<String> imageUrls;
 
