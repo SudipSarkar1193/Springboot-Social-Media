@@ -39,6 +39,15 @@ public class PostServiceImpl implements PostService {
     private final CloudinaryService cloudinaryService;
 
     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
+
+        // --- START OF ADDED LOGGING ---
+        log.info("RAW DTO received in controller: {}", createPostRequest.toString());
+        log.info("Content from DTO: {}", createPostRequest.getContent());
+        // --- END OF ADDED LOGGING ---
+
+        log.info("Creating post for user: {}", currentUserDetails.getUsername());
+        log.debug("Post creation request: {}", createPostRequest);
+
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
 
