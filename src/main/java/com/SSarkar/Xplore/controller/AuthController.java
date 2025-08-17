@@ -40,6 +40,7 @@ public class AuthController {
         try {
             emailService.sendOtpEmail(registrationRequest.getEmail(), otp);
         } catch (MessagingException e) {
+            log.error("Failed to send OTP email to {}: {}", registrationRequest.getEmail(), e.getMessage());
             return buildErrorResponse("Error sending OTP", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -88,7 +89,6 @@ public class AuthController {
             return buildErrorResponse("Invalid or expired OTP", HttpStatus.BAD_REQUEST);
         }
     }
-
     @PostMapping("/resend-otp")
     public ResponseEntity<Map<String, String>> resendOtp(@RequestBody VerifyOtpRequestDTO request) {
         UserRegistrationRequestDTO registrationRequest = otpService.getRegistrationRequest(request.getEmail());

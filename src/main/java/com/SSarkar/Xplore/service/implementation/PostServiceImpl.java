@@ -41,7 +41,7 @@ public class PostServiceImpl implements PostService {
     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
 
         // --- START OF ADDED LOGGING ---
-        log.info("RAW DTO received in controller: {}", createPostRequest.toString());
+        //log.info("RAW DTO received in controller: {}", createPostRequest.toString());
         log.info("Content from DTO: {}", createPostRequest.getContent());
         // --- END OF ADDED LOGGING ---
 
@@ -122,7 +122,7 @@ public class PostServiceImpl implements PostService {
         parentPost.addComment(savedComment);
         postRepository.save(parentPost);
 
-        log.info("New comment with UUID: {} added to post with UUID: {}", savedComment.getUuid(), parentPost.getUuid());
+        //log.info("New comment with UUID: {} added to post with UUID: {}", savedComment.getUuid(), parentPost.getUuid());
         notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
 
         return mapPostToResponseDTO(savedComment, author, 0, Collections.emptyMap(), Collections.emptySet());
