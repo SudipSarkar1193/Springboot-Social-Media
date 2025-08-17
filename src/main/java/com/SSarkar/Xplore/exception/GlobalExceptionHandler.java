@@ -6,8 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
@@ -56,5 +59,30 @@ public class GlobalExceptionHandler {
                 ex.getMessage() // We use the specific message from the exception
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponseDTO> handleValidationExceptions(
+            MethodArgumentNotValidException ex, WebRequest request) {
+
+        StringBuilder errors = new StringBuilder();
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            errors.append(error.getField())
+                    .append(": ")
+                    .append(error.getDefaultMessage())
+                    .append(", ");
+        }
+        // Remove the trailing comma and space
+        String errorMessage = !errors.isEmpty() ? errors.substring(0, errors.length() - 2) : "";
+
+        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                errorMessage
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 }
