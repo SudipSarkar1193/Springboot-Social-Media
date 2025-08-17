@@ -15,6 +15,7 @@ import com.SSarkar.Xplore.service.contract.PostService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -131,6 +132,7 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable, UserDetails currentUserDetails) {
+
         Page<Post> postPage = postRepository.findAllByParentPostIsNull(pageable);
         log.debug("Fetched {} top-level posts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
 
@@ -158,6 +160,55 @@ public class PostServiceImpl implements PostService {
                 postPage.getTotalPages(),
                 postPage.getTotalElements(),
                 postPage.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponseDTO<PostResponseDTO> getFeedPosts(Pageable pageable, UserDetails currentUserDetails) {
+        User currentUser = getCurrentUserOrNull(currentUserDetails);
+
+        if (currentUser == null) {
+            return getAllTopLevelPosts(pageable, null);
+        }
+
+        // Create a new Pageable object without any sorting information
+        Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+        // Step 1: Get the sorted and paginated list of Post UUIDs using the unsorted pageable.
+        Page<UUID> postUuidsPage = postRepository.findFeedPostUuidsForUser(currentUser, unsortedPageable); // Use the new unsortedPageable
+        List<UUID> postUuids = postUuidsPage.getContent();
+
+        if (postUuids.isEmpty()) {
+            return new PagedResponseDTO<>(Collections.emptyList(), postUuidsPage.getNumber(), postUuidsPage.getTotalPages(), postUuidsPage.getTotalElements(), postUuidsPage.isLast());
+        }
+
+        // Step 2: Fetch the full Post entities for the retrieved UUIDs.
+        List<Post> posts = postRepository.findByUuidIn(postUuids);
+
+        // Re-sort the posts in memory to match the order from the first query
+        posts.sort(Comparator.comparing(p -> postUuids.indexOf(p.getUuid())));
+
+        log.debug("Fetched {} feed posts for user {}", posts.size(), currentUser.getUsername());
+
+        // ... the rest of the method remains the same ...
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        Set<UUID> likedPostUuids = likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts);
+
+        List<PostResponseDTO> postResponseDTOList = posts.stream()
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids))
+                .collect(Collectors.toList());
+
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postUuidsPage.getNumber(),
+                postUuidsPage.getTotalPages(),
+                postUuidsPage.getTotalElements(),
+                postUuidsPage.isLast()
         );
     }
 

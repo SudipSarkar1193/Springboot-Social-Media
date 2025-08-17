@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.lang.NonNull;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -47,4 +48,20 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p.uuid as postUuid, COUNT(l.id) as likeCount FROM Post p LEFT JOIN p.likes l WHERE p IN :posts GROUP BY p.uuid")
     List<Map<String, Object>> countLikesForPosts(@Param("posts") List<Post> posts);
+
+    /**
+     * Step 1: Fetches a paginated list of Post UUIDs with the custom feed sorting.
+     * This query is optimized to only fetch the IDs, avoiding the collection join issue.
+     */
+    @Query("SELECT p.uuid FROM Post p WHERE p.parentPost IS NULL ORDER BY CASE WHEN p.author = :currentUser THEN 0 WHEN p.author IN (SELECT f.followee FROM Follow f WHERE f.follower = :currentUser) THEN 1 ELSE 2 END, p.createdAt DESC")
+    Page<UUID> findFeedPostUuidsForUser(@Param("currentUser") UserDetails currentUser, Pageable pageable);
+
+    /**
+     * Step 2: Fetches the full Post entities for a given list of UUIDs.
+     * The @EntityGraph is applied here to efficiently load the author and comments.
+     */
+    @EntityGraph(attributePaths = {"author", "comments"})
+    @Query("SELECT p FROM Post p WHERE p.uuid IN :uuids")
+    List<Post> findByUuidIn(@Param("uuids") List<UUID> uuids);
+
 }

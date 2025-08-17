@@ -12,6 +12,8 @@ public interface PostService {
 
     PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable, UserDetails currentUser);
 
+    PagedResponseDTO<PostResponseDTO> getFeedPosts(Pageable pageable, UserDetails currentUserDetails);
+
     PostResponseDTO getPostByUuid(UUID uuid, UserDetails currentUser);
 
     void deletePost(UUID uuid, UserDetails currentUser);

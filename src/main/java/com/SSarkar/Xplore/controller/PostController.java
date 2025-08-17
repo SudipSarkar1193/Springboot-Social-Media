@@ -41,7 +41,7 @@ public class PostController {
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
             @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
             @AuthenticationPrincipal UserDetails currentUser) {
-        PagedResponseDTO<PostResponseDTO> posts = postService.getAllTopLevelPosts(pageable, currentUser);
+        PagedResponseDTO<PostResponseDTO> posts = postService.getFeedPosts(pageable, currentUser);
         return ResponseEntity.ok(posts);
     }
 
