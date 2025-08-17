@@ -55,7 +55,7 @@ public class SecurityConfig {
                 // 3. Define authorization rules
                 .authorizeHttpRequests(authorize -> authorize
                         // Allow all requests to /api/auth/** (e.g., /register, /login)
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**","/actuator/health").permitAll()
                         // Require authentication for any other request
                         .anyRequest().authenticated()
                 )
