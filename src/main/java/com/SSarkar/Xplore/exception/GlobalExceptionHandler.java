@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ResponseEntity<ErrorResponseDTO> handleBadCredentialsException(BadCredentialsException ex) {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 LocalDateTime.now(),
@@ -34,6 +35,7 @@ public class GlobalExceptionHandler {
      * Handles exceptions thrown when registration fails due to duplicate data.
      */
     @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
     public ResponseEntity<ErrorResponseDTO> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 LocalDateTime.now(),
@@ -45,7 +47,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     /**
      * Handles exceptions thrown when an illegal argument is passed to a method.
      * This could be due to invalid input data, such as a malformed UUID.
