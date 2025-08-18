@@ -50,14 +50,37 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Map<String, Object>> countLikesForPosts(@Param("posts") List<Post> posts);
 
     /**
-     * Step 1: Fetches a paginated list of Post UUIDs with the custom feed sorting.
-     * This query is optimized to only fetch the IDs, avoiding the collection join issue.
+     * Fetches a paginated list of Post UUIDs with a custom feed sorting:
+     *
+     * Priority Order:
+     *  1. Posts authored by the current user (always on top, newest first).
+     *  2. Posts from followings that were created within the last 24 hours
+     *     (most recent first).
+     *  3. All remaining posts (most recent first).
+     *
+     * Note: Uses a CASE expression for sorting logic and delegates the 24-hour
+     * window check to a parameter (`:yesterday`) for better portability across databases.
      */
-    @Query("SELECT p.uuid FROM Post p WHERE p.parentPost IS NULL ORDER BY CASE WHEN p.author = :currentUser THEN 0 WHEN p.author IN (SELECT f.followee FROM Follow f WHERE f.follower = :currentUser) THEN 1 ELSE 2 END, p.createdAt DESC")
+    @Query("""
+    SELECT p.uuid 
+    FROM Post p 
+    WHERE p.parentPost IS NULL 
+    ORDER BY 
+        CASE 
+            WHEN p.author IN (
+                SELECT f.followee FROM Follow f WHERE f.follower = :currentUser
+            )
+            AND p.createdAt >= CURRENT_TIMESTAMP - 1 DAY
+            THEN 0
+            ELSE 1
+        END,
+        p.createdAt DESC
+    """)
     Page<UUID> findFeedPostUuidsForUser(@Param("currentUser") UserDetails currentUser, Pageable pageable);
 
+
     /**
-     * Step 2: Fetches the full Post entities for a given list of UUIDs.
+     * Fetches the full Post entities for a given list of UUIDs.
      * The @EntityGraph is applied here to efficiently load the author and comments.
      */
     @EntityGraph(attributePaths = {"author", "comments"})
