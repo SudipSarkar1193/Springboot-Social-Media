@@ -29,6 +29,7 @@ public class PostResponseDTO {
     private List<PostResponseDTO> comments; // A list of nested comments
     private long commentCount;
     private long shareCount ;
+    private int depth ;
 
     // --- NEW Fields for Likes ---
     private int likeCount;

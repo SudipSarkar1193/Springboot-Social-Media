@@ -39,6 +39,49 @@ public class PostServiceImpl implements PostService {
     private final NotificationService notificationService;
     private final CloudinaryService cloudinaryService;
 
+    /**
+     * Helper method to compute the depth of posts for a single request.
+     * This is thread-safe as it operates on local variables.
+     */
+    private void computeAndStoreDepths(List<Post> posts, Map<UUID, Integer> postDepthMap) {
+        // Create a temporary map for quick lookups using a traditional for-loop
+        Map<UUID, Post> postsOnPage = new HashMap<>();
+        for (Post post : posts) {
+            postsOnPage.put(post.getUuid(), post);
+        }
+
+        for (Post post : posts) {
+            // Skip if depth is already computed (e.g., for a post that is also a comment in the same list)
+            if (postDepthMap.containsKey(post.getUuid())) {
+                continue;
+            }
+
+            int depth = 0;
+            Post parent = post.getParentPost();
+
+            while (parent != null) {
+                depth++;
+                // Optimization: Check if the parent is on the current page to avoid a DB hit
+                if (postsOnPage.containsKey(parent.getUuid())) {
+                    parent = postsOnPage.get(parent.getUuid()).getParentPost();
+                } else {
+                    // If the parent is not on the current page, fetch it from the database.
+                    // This can still cause N+1 in deep, cross-page comment threads, but is a necessary trade-off for this implementation.
+                    // Fetch the parent post from the repository
+                    Optional<Post> parentOptional = postRepository.findByUuid(parent.getUuid());
+
+                    // Check if the parent post was found and update the parent variable
+                    if (parentOptional.isPresent()) {
+                        parent = parentOptional.get().getParentPost();
+                    } else {
+                        parent = null;
+                    }
+                }
+            }
+            postDepthMap.put(post.getUuid(), depth);
+        }
+    }
+
     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
 
         // --- START OF ADDED LOGGING ---
@@ -81,7 +124,9 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
 
-        return mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet());
+        PostResponseDTO response = mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet());
+        response.setDepth(0); // Manually set depth to 0 for a new post
+        return response;
     }
 
     @Override
@@ -126,7 +171,17 @@ public class PostServiceImpl implements PostService {
         //log.info("New comment with UUID: {} added to post with UUID: {}", savedComment.getUuid(), parentPost.getUuid());
         notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
 
-        return mapPostToResponseDTO(savedComment, author, 0, Collections.emptyMap(), Collections.emptySet());
+        // Calculate depth
+        int depth = 0;
+        Post parent = parentPost;
+        while (parent != null) {
+            depth++;
+            parent = parent.getParentPost();
+        }
+
+        PostResponseDTO response = mapPostToResponseDTO(savedComment, author, 0, Collections.emptyMap(), Collections.emptySet());
+        response.setDepth(depth); // Manually set calculated depth
+        return response;
     }
 
     @Override
@@ -150,8 +205,12 @@ public class PostServiceImpl implements PostService {
                 ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts)
                 : Collections.emptySet();
 
+        //Compute depth :
+        Map<UUID, Integer> postDepthMap = new HashMap<>();
+        computeAndStoreDepths(posts, postDepthMap);
+
         List<PostResponseDTO> postResponseDTOList = posts.stream()
-                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids))
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids,postDepthMap))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -189,6 +248,10 @@ public class PostServiceImpl implements PostService {
         // Re-sort the posts in memory to match the order from the first query
         posts.sort(Comparator.comparing(p -> postUuids.indexOf(p.getUuid())));
 
+        //Compute depth :
+        Map<UUID, Integer> postDepthMap = new HashMap<>();
+        computeAndStoreDepths(posts, postDepthMap);
+
         log.debug("Fetched {} feed posts for user {}", posts.size(), currentUser.getUsername());
 
         // ... the rest of the method remains the same ...
@@ -200,7 +263,7 @@ public class PostServiceImpl implements PostService {
         Set<UUID> likedPostUuids = likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts);
 
         List<PostResponseDTO> postResponseDTOList = posts.stream()
-                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids))
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids,postDepthMap))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -224,6 +287,13 @@ public class PostServiceImpl implements PostService {
         User currentUser = getCurrentUserOrNull(currentUserDetails);
         List<Post> posts = postPage.getContent();
 
+        // Depth
+
+        Map<UUID,Integer> depthMap = new HashMap<>();
+
+        computeAndStoreDepths(posts,depthMap);
+
+
         Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
                 .collect(Collectors.toMap(
                         result -> (UUID) result.get("postUuid"),
@@ -234,7 +304,7 @@ public class PostServiceImpl implements PostService {
                 : Collections.emptySet();
 
         List<PostResponseDTO> postResponseDTOList = posts.stream()
-                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids))
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids,depthMap))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -265,24 +335,37 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public PostResponseDTO getPostByUuid(UUID uuid, UserDetails currentUserDetails) {
         Post post = postRepository.findByUuid(uuid)
+                .map(p -> (Post) p) // Cast from Object to Post
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with UUID: " + uuid));
+
         User currentUser = getCurrentUserOrNull(currentUserDetails);
 
-        // ✅ Collect ALL posts (parent + all nested comments)
+        // ✅ Collect ALL posts (the main post + all its nested comments) into a flat list.
         List<Post> allPosts = collectAllPostsIncludingComments(post);
 
-        // ✅ Calculate like counts for ALL posts
-        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(allPosts).stream()
-                .collect(Collectors.toMap(
-                        result -> (UUID) result.get("postUuid"),
-                        result -> (Long) result.get("likeCount")));
+        // ✅ Create a local map to hold the depth calculations for this request.
+        Map<UUID, Integer> postDepthMap = new HashMap<>();
 
-        // ✅ Calculate liked status for ALL posts
+        // ✅ Run the depth calculation on the entire collection of posts.
+        computeAndStoreDepths(allPosts, postDepthMap);
+
+
+        // ✅ Calculate like counts for all the posts in the thread using a for-loop.
+        List<Map<String, Object>> likeCountResults = postRepository.countLikesForPosts(allPosts);
+        Map<UUID, Long> likeCounts = new HashMap<>();
+        for (Map<String, Object> result : likeCountResults) {
+            UUID postUuid = (UUID) result.get("postUuid");
+            Long count = (Long) result.get("likeCount");
+            likeCounts.put(postUuid, count);
+        }
+
+        // ✅ Calculate the liked status for all posts in the thread.
         Set<UUID> likedPostUuids = (currentUser != null)
                 ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, allPosts)
                 : Collections.emptySet();
 
-        return mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids);
+        // ✅ Correctly call the mapping function, passing the postDepthMap.
+        return mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids, postDepthMap);
     }
 
     @Override
@@ -416,6 +499,10 @@ public class PostServiceImpl implements PostService {
                 .map(Like::getPost)
                 .collect(Collectors.toList());
 
+        // Depth :
+        Map<UUID,Integer> depthMap = new HashMap<>();
+        computeAndStoreDepths(posts,depthMap);
+
         // Fetch like counts for these posts in bulk
         Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
                 .collect(Collectors.toMap(
@@ -430,7 +517,7 @@ public class PostServiceImpl implements PostService {
 
         // Use the new mapping method with the fetched data
         List<PostResponseDTO> postResponseDTOs = posts.stream()
-                .map(post -> mapPostToResponseDTO(post, user, 1, likeCounts, likedPostUuids))
+                .map(post -> mapPostToResponseDTO(post, user, 1, likeCounts, likedPostUuids,depthMap))
                 .collect(Collectors.toList());
 
         return new PagedResponseDTO<>(
@@ -462,7 +549,8 @@ public class PostServiceImpl implements PostService {
         return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
     }
 
-    private PostResponseDTO mapPostToResponseDTO(Post post, User currentUser, int recursionDepth, Map<UUID, Long> likeCounts, Set<UUID> likedPostUuids) {
+
+    private PostResponseDTO mapPostToResponseDTO(Post post, User currentUser, int recursionDepth, Map<UUID, Long> likeCounts, Set<UUID> likedPostUuids, Map<UUID, Integer> postDepthMap) {
         if (post == null) return null;
 
         PostResponseDTO dto = new PostResponseDTO();
@@ -474,6 +562,9 @@ public class PostServiceImpl implements PostService {
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
         dto.setShareCount(post.getShareCount());
+
+        // Use the UUID of the post to look up its depth in the map
+        dto.setDepth(postDepthMap.getOrDefault(post.getUuid(), -1));
 
         if (post.getAuthor().getUserProfile() != null && post.getAuthor().getUserProfile().getProfilePictureUrl() != null) {
             dto.setAuthorProfilePictureUrl(post.getAuthor().getUserProfile().getProfilePictureUrl());
@@ -494,12 +585,17 @@ public class PostServiceImpl implements PostService {
         if (recursionDepth > 0 && commentList != null && !commentList.isEmpty()) {
             List<PostResponseDTO> commentDTOs = new ArrayList<>();
             for (Post comment : commentList) {
-                commentDTOs.add(mapPostToResponseDTO(comment, currentUser, recursionDepth - 1, likeCounts, likedPostUuids));
+                commentDTOs.add(mapPostToResponseDTO(comment, currentUser, recursionDepth - 1, likeCounts, likedPostUuids, postDepthMap));
             }
             dto.setComments(commentDTOs);
         }
 
         return dto;
+    }
+
+    // overloaded version for methods that don't need depth
+    private PostResponseDTO mapPostToResponseDTO(Post post, User currentUser, int recursionDepth, Map<UUID, Long> likeCounts, Set<UUID> likedPostUuids) {
+        return mapPostToResponseDTO(post, currentUser, recursionDepth, likeCounts, likedPostUuids, Collections.emptyMap());
     }
 
     private long countNestedComments(Post post) {
