@@ -226,6 +226,9 @@ public class PostServiceImpl implements PostService {
     public PagedResponseDTO<PostResponseDTO> getAllFollowingPost(Pageable pageable, UserDetails currentUserDetails) {
         User currentUser = getCurrentUserOrNull(currentUserDetails);
 
+        log.debug("User found in getAllFollowingPost {} ",currentUser.getUsername());
+        log.debug("inside getAllFollowingPost!") ;
+
         if (currentUser == null) {
             return new PagedResponseDTO<>(Collections.emptyList(), 0, 0, 0, true);
         }
