@@ -1,6 +1,7 @@
 package com.SSarkar.Xplore.repository;
 
 import com.SSarkar.Xplore.entity.Post;
+import com.SSarkar.Xplore.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -94,6 +95,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     )
     ORDER BY p.createdAt DESC
 """)
-    Page<Post> findPostsByFollowing(@Param("currentUser") UserDetails currentUser, Pageable pageable);
+    Page<Post> findPostsByFollowing(@Param("currentUser") User currentUser, Pageable pageable);
 
 }

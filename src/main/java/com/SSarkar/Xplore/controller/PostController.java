@@ -45,6 +45,15 @@ public class PostController {
         return ResponseEntity.ok(posts);
     }
 
+    @GetMapping("/following")
+    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getFollowingPosts(
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @AuthenticationPrincipal UserDetails currentUser
+    ){
+        PagedResponseDTO<PostResponseDTO> posts = postService.getAllFollowingPost(pageable, currentUser);
+        return ResponseEntity.ok(posts);
+    }
+
     @GetMapping("/{uuid}")
     public ResponseEntity<PostResponseDTO> getPostByUuid(
             @PathVariable UUID uuid,
@@ -121,12 +130,5 @@ public class PostController {
         return ResponseEntity.ok(posts);
     }
 
-    @GetMapping("/following")
-    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getFollowingPosts(
-            @AuthenticationPrincipal UserDetails currentUser,
-            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable
-    ){
-        PagedResponseDTO<PostResponseDTO> posts = postService.getAllFollowingPost(pageable, currentUser);
-        return ResponseEntity.ok(posts);
-    }
+
 }
