@@ -50,6 +50,7 @@ public class PostController {
             @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
             @AuthenticationPrincipal UserDetails currentUser
     ){
+        log.info("Following posts request: {}", currentUser.getUsername());
         PagedResponseDTO<PostResponseDTO> posts = postService.getAllFollowingPost(pageable, currentUser);
         return ResponseEntity.ok(posts);
     }
