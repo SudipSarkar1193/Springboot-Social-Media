@@ -120,4 +120,13 @@ public class PostController {
         PagedResponseDTO<PostResponseDTO> posts = postService.getLikedPostsByUser(uuid, pageable);
         return ResponseEntity.ok(posts);
     }
+
+    @GetMapping("/following")
+    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getFollowingPosts(
+            @AuthenticationPrincipal UserDetails currentUser,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable
+    ){
+        PagedResponseDTO<PostResponseDTO> posts = postService.getAllFollowingPost(pageable, currentUser);
+        return ResponseEntity.ok(posts);
+    }
 }

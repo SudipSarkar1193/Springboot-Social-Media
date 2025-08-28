@@ -223,6 +223,41 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public PagedResponseDTO<PostResponseDTO> getAllFollowingPost(Pageable pageable, UserDetails currentUserDetails) {
+        User currentUser = getCurrentUserOrNull(currentUserDetails);
+
+        if (currentUser == null) {
+            return new PagedResponseDTO<>(Collections.emptyList(), 0, 0, 0, true);
+        }
+
+        Page<Post> postPage = postRepository.findPostsByFollowing(currentUser, pageable);
+        List<Post> posts = postPage.getContent();
+
+        Map<UUID, Integer> postDepthMap = new HashMap<>();
+        computeAndStoreDepths(posts, postDepthMap);
+
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        Set<UUID> likedPostUuids = likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts);
+
+        List<PostResponseDTO> postResponseDTOList = posts.stream()
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids, postDepthMap))
+                .collect(Collectors.toList());
+
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postPage.getNumber(),
+                postPage.getTotalPages(),
+                postPage.getTotalElements(),
+                postPage.isLast()
+        );
+
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PagedResponseDTO<PostResponseDTO> getFeedPosts(Pageable pageable, UserDetails currentUserDetails) {
         User currentUser = getCurrentUserOrNull(currentUserDetails);

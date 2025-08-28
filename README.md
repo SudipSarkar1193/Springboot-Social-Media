@@ -101,10 +101,84 @@ This project is a direct result of the intensive training from the DN 4.0 progra
 
 -   **Spring Security:** I secured the API using Spring Security. This includes a SecurityConfig class that defines which endpoints are public (/api/auth/**) and which are protected. I implemented stateless authentication using JSON Web Tokens (JWT), with JwtUtils for token generation/validation and a JwtAuthFilter to process tokens for each request.
 
--   **Logging Framework (Module 4):** I integrated `SLF4J` for logging throughout the backend, using the @Slf4j annotation in my service and controller classes to record events and errors. I also configured logging levels in the application.properties file.
+-   **Logging Framework (Module 4):** I integrated `SLF4J` for logging throughout the backend, using the `@Slf4j` annotation in my service and controller classes to record events and errors. I also configured logging levels in the application.properties file.
 
 -   **Version Control (Module 11):** The project is version-controlled with Git, and I've used standard practices for commits and branching.
 
 -   **DevOps & Containerization (Modules 12 & 14):** The inclusion of a Dockerfile demonstrates my ability to containerize the application, a fundamental step in modern DevOps practices for creating consistent and portable deployment environments.
 
 -   **Cloud Fundamentals (Module 13):** I demonstrated my understanding of cloud integration by using `Cloudinary` for image storage. Additionally, I configured the application to use `Microsoft Azure SQL DB` for data persistence, showcasing the practical use of a cloud-based Platform as a Service (PaaS) as covered in the curriculum.
+
+
+## ⚙️ Key Implementation Details
+
+Here's a closer look at some of the core components I built for this application :
+
+### Global Exception Handling
+
+To ensure the API provides consistent and clean error responses, I implemented a centralized exception handler using the `@ControllerAdvice` annotation. This intercepts exceptions from any controller and formats them into a standardized JSON response.
+
+-   **Validation Errors (`@Valid`):** When input data in a request body fails validation (e.g., a blank password), the handler catches the `MethodArgumentNotValidException` and returns a `400 Bad Request` response with details about which fields are invalid.
+-   **Duplicate Data Conflicts:** If a user tries to register with an email that already exists, the `AuthService` throws an `IllegalStateException`. The handler catches this and returns a `409 Conflict` status, preventing duplicate accounts.
+-   **Authentication Failures:** For incorrect login attempts, Spring Security throws a `BadCredentialsException`. My handler catches this and returns a `401 Unauthorized` response with a generic "Invalid credentials" message to protect against user enumeration attacks.
+
+### JWT-Based Authentication Flow
+
+The application uses a stateless, token-based authentication system with JSON Web Tokens (JWT), which is a modern standard for securing REST APIs. The flow is managed by Spring Security.
+
+**1. Login & Token Generation**
+   - A user sends their credentials to the `/api/auth/login` endpoint.
+   - The `AuthenticationManager` uses my custom `UserDetailsServiceImpl` to fetch the user from the database and verify the password.
+   - If successful, the `JwtUtils` class generates a signed JWT containing the user's username and an expiration date.
+   - This JWT is returned to the client, who must include it in the `Authorization` header for all future requests to protected endpoints.
+
+**2. API Request Authentication**
+   - For any request to a protected endpoint (e.g., creating a post), the client sends the JWT in the `Authorization: Bearer <token>` header.
+   - My custom `JwtAuthFilter` intercepts the request before it reaches the controller.
+   - The filter uses `JwtUtils` to validate the token's signature and expiration date.
+   - If the token is valid, the filter sets the user's authentication details in Spring Security's `SecurityContext`. This authenticates the user for the duration of the request.
+   - If the token is invalid or missing, access is denied, and my custom `AuthEntryPoint` returns a `401 Unauthorized` JSON response.
+
+---
+
+## 🗄️ Database Schema and Entity Relationships
+
+The application's functionality is built upon a relational database schema defined using JPA (Java Persistence API) entities. The core of the application revolves around the `User`, who creates `Post` entities and interacts with them through `Like`, `Follow`, and `Notification` entities.
+
+
+### User and UserProfile (One-to-One)
+
+-   The **`User`** entity is the central model, containing essential authentication details like username, email, and password.
+-   Each `User` has a **`UserProfile`** which stores additional, non-essential information like bio, full name, and profile picture URL.
+-   This is a bi-directional **`@OneToOne`** relationship. The `UserProfile` entity owns the relationship by using `@MapsId`, which means its primary key is also a foreign key to the `User`'s primary key. This design separates authentication concerns from profile data.
+
+### User and Post (One-to-Many)
+
+-   A single **`User`** (the author) can create multiple **`Post`** entities.
+-   Each `Post` belongs to exactly one `User`. This is a standard **`@OneToMany`** relationship from `User` to `Post` and a **`@ManyToOne`** relationship from `Post` back to `User`.
+
+
+### Post Self-Relationship (for Comments)
+
+-   The **`Post`** entity has a self-referencing relationship to model comments. A `Post` can be a parent to many other `Post` entities (which are comments).
+-   A comment `Post` has a **`@ManyToOne`** link to its `parentPost`. This allows for a nested, threaded comment structure.
+-   Cascade settings (`CascadeType.ALL`, `orphanRemoval = true`) ensure that when a post is deleted, all its comments are automatically deleted as well.
+
+
+### Users and Posts through Likes (Many-to-Many)
+
+-   A **`User`** can like many **`Post`** entities, and a `Post` can be liked by many `User` entities. This many-to-many relationship is implemented through a join table/entity called **`Like`**.
+-   The `Like` entity links a `User` and a `Post` together via two **`@ManyToOne`** relationships. A unique constraint on the user and post IDs ensures a user can only like a post once.
+
+
+### Users and Followers (Many-to-Many)
+
+-   Similar to likes, the "follow" feature is a many-to-many relationship between **`User`** entities. A user can follow many other users and can also be followed by many users.
+-   This is implemented with a join entity called **`Follow`**, which contains a `follower` (`User`) and a `followee` (`User`).
+
+
+### Notifications and Users (Many-to-One)
+
+-   The **`Notification`** entity is used to inform users about events.
+-   Each notification has a **`@ManyToOne`** relationship with the `recipient` (User who receives it) and the `sender` (User who triggered it).
+-   It also stores the `NotificationType` (e.g., `NEW_FOLLOW`, `POST_LIKE`) and the `UUID` of the related entity (e.g., the post that was liked), making notifications flexible and informative.

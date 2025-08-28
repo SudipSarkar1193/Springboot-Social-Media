@@ -12,6 +12,8 @@ public interface PostService {
 
     PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable, UserDetails currentUser);
 
+    PagedResponseDTO<PostResponseDTO> getAllFollowingPost(Pageable pageable, UserDetails currentUserDetails);
+
     PagedResponseDTO<PostResponseDTO> getFeedPosts(Pageable pageable, UserDetails currentUserDetails);
 
     PostResponseDTO getPostByUuid(UUID uuid, UserDetails currentUser);
@@ -31,7 +33,5 @@ public interface PostService {
     PagedResponseDTO<PostResponseDTO> getLikedPostsByUser(UUID userUuid, Pageable pageable);
 
     String increaseShareCount(UUID postUuid);
-
-
 
 }
