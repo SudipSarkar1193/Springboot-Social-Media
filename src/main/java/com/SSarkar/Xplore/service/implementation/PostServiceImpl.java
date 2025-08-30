@@ -224,6 +224,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PagedResponseDTO<PostResponseDTO> getAllFollowingPost(Pageable pageable, UserDetails currentUserDetails) {
+
         User currentUser = getCurrentUserOrNull(currentUserDetails);
 
         log.debug("User found in getAllFollowingPost {} ",currentUser.getUsername());
@@ -233,7 +234,7 @@ public class PostServiceImpl implements PostService {
             return new PagedResponseDTO<>(Collections.emptyList(), 0, 0, 0, true);
         }
 
-        Page<Post> postPage = postRepository.findPostsByFollowing(currentUser, pageable);
+        Page<Post> postPage = postRepository.findPostsByFollowing(currentUser.getUuid(), pageable);
         List<Post> posts = postPage.getContent();
 
         Map<UUID, Integer> postDepthMap = new HashMap<>();

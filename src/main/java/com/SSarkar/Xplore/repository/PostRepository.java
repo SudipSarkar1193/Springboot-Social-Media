@@ -21,11 +21,13 @@ import java.util.stream.Collectors;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findByUuid(UUID uuid);
+
     void deleteByUuid(UUID uuid);
 
 
     /**
      * Overriding findAll to solve the N+1 problem.
+     *
      * @EntityGraph tells JPA to also fetch the related entities specified in 'attributePaths'.
      * In this case, we are fetching the 'author' of each post.
      * JPA will generate a single query with a JOIN to fetch Posts and their Authors together.
@@ -52,18 +54,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /**
      * Fetches a paginated list of Post UUIDs with a custom feed sorting:
-     *
+     * <p>
      * Priority Order:
-     *  1. Posts authored by the current user (always on top, newest first).
-     *  2. Posts from followings that were created within the last 24 hours
-     *     (most recent first).
-     *  3. All remaining posts (most recent first).
-     *
+     * 1. Posts authored by the current user (always on top, newest first).
+     * 2. Posts from followings that were created within the last 24 hours
+     * (most recent first).
+     * 3. All remaining posts (most recent first).
+     * <p>
      * Note: Uses a CASE expression for sorting logic and delegates the 24-hour
      * window check to a parameter (`:yesterday`) for better portability across databases.
      */
     @Query("""
-    SELECT p.uuid 
+
+            SELECT p.uuid 
     FROM Post p 
     WHERE p.parentPost IS NULL 
     ORDER BY 
@@ -91,10 +94,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("""
     SELECT p FROM Post p
     WHERE p.author IN (
-        SELECT f.followee FROM Follow f WHERE f.follower = :currentUser
-    )
-    ORDER BY p.createdAt DESC
-""")
-    Page<Post> findPostsByFollowing(@Param("currentUser") User currentUser, Pageable pageable);
+        SELECT f.followee FROM Follow f WHERE f.follower.uuid = :currentUserUuid
+    ) AND p.parentPost IS NULL 
+    """)
+    Page<Post> findPostsByFollowing(@Param("currentUserUuid") UUID currentUserUuid, Pageable pageable);
+
 
 }
