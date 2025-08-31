@@ -6,9 +6,11 @@ import lombok.Data;
 
 @Data
 public class UserProfileUpdateDTO {
-    @NotBlank(message = "Full name cannot be empty.")
-    @Size(max = 50, message = "Full name cannot exceed 50 characters.")
     private String fullName;
+
+    @NotBlank(message = "User-name cannot be empty.")
+    @Size(max = 50, message = "Username cannot exceed 50 characters.")
+    private String username;
 
     @Size(max =320 ,message = "Bio cannot exceed 320 characters.")
     private String bio;

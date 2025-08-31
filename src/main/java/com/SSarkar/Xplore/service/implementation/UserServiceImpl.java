@@ -11,6 +11,7 @@ import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.CloudinaryService;
 import com.SSarkar.Xplore.service.contract.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -52,6 +54,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO updateUserProfile(UserDetails currentUserDetails, UserProfileUpdateDTO updateDTO) {
+
+        log.debug("UserProfileUpdateDTO {}",updateDTO.toString());
+
         // 1. Fetch the User entity based on the authenticated user's username.
         User user = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + currentUserDetails.getUsername()));
@@ -69,6 +74,13 @@ public class UserServiceImpl implements UserService {
         if (updateDTO.getFullName() != null) {
             userProfile.setFullName(updateDTO.getFullName());
         }
+        if(updateDTO.getUsername() != null && !updateDTO.getUsername().equals(user.getUsername())){
+            if(userRepository.existsByUsername(updateDTO.getUsername())){
+                throw new IllegalArgumentException("Username is already taken.");
+            }
+            user.setUsername(updateDTO.getUsername());
+        }
+
         if (updateDTO.getBio() != null) {
             userProfile.setBio(updateDTO.getBio());
         }

@@ -20,7 +20,7 @@ public class UserProfile {
     @Id
     private Long id; // We will share the primary key with the User entity
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
     private String bio;
 
     private String profilePictureUrl;

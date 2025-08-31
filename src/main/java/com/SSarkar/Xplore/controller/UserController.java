@@ -81,11 +81,21 @@ public class UserController {
 
 
     @PutMapping("/update")
-    public ResponseEntity<UserResponseDTO> updateUserProfile(
+    public ResponseEntity<Object> updateUserProfile(
             @AuthenticationPrincipal UserDetails currentUserDetails,
             @Valid @RequestBody UserProfileUpdateDTO updateDTO
     ) {
-        UserResponseDTO updatedUser = userService.updateUserProfile(currentUserDetails, updateDTO);
-        return ResponseEntity.ok(updatedUser);
+        log.info("------------->>>>>>>> {}",updateDTO);
+        log.info("------------->>>>>>>> {}",updateDTO.toString());
+        try{
+            UserResponseDTO updatedUser = userService.updateUserProfile(currentUserDetails, updateDTO);
+            return ResponseEntity.ok(updatedUser);
+        }catch (Exception e){
+            log.error("Error updating user profile", e);
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "An unexpected error occurred.";
+            Map<String,String> errorResponse = new HashMap<>();
+            errorResponse.put("error", errorMessage);
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 }
