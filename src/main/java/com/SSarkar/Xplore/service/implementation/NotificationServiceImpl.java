@@ -160,9 +160,9 @@ public class NotificationServiceImpl implements NotificationService {
                     return senderUsername + " liked your post.";
             case POST_COMMENT:
                 if(post !=null && post.getParentPost() != null)
-                    return senderUsername + "replied to your comment.";
+                    return senderUsername + " replied to your comment.";
                 else
-                    return senderUsername + "commented on your post.";
+                    return senderUsername + " commented on your post.";
             default:
                 return "You have a new notification.";
         }
