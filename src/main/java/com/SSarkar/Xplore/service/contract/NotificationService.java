@@ -16,4 +16,6 @@ public interface NotificationService {
     PagedResponseDTO<NotificationResponseDTO> getNotificationsForUser(UserDetails currentUserDetails, Pageable pageable);
 
     long getUnreadNotificationCount(UserDetails currentUserDetails);
+
+    void unsubscribeUser(String token);
 }

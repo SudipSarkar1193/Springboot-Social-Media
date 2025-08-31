@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
@@ -40,5 +41,11 @@ public class NotificationController {
         long count = notificationService.getUnreadNotificationCount(currentUserDetails);
         Map<String, Long> response = Collections.singletonMap("count", count);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/unsubscribe")
+    public ResponseEntity<String> unsubscribe(@RequestParam("token") String token) {
+        notificationService.unsubscribeUser(token);
+        return ResponseEntity.ok("You have been successfully unsubscribed from email notifications.");
     }
 }
