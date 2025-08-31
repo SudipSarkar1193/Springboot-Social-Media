@@ -88,4 +88,7 @@ public class Post {
         comments.remove(comment);
         comment.setParentPost(null);
     }
+
+    //Going to add this if needed later ...
+    //private int depth = -1 ; // 0 for top-level posts, 1 for comments, etc... if not computed yet, -1
 }

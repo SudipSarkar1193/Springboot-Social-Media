@@ -145,13 +145,24 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String generateMessage(Notification notification) {
         String senderUsername = (notification.getSender() != null) ? notification.getSender().getUsername() : "Someone";
+
+        Post post = null ;
+        if(notification.getRelatedEntityUuid() != null)
+            post = postRepository.findByUuid(notification.getRelatedEntityUuid()).orElse(null);
+
         switch (notification.getType()) {
             case NEW_FOLLOWER:
                 return senderUsername + " started following you.";
             case POST_LIKE:
-                return senderUsername + " liked your post.";
+                if(post !=null && post.getParentPost() != null)
+                    return senderUsername + " liked your comment.";
+                else
+                    return senderUsername + " liked your post.";
             case POST_COMMENT:
-                return senderUsername + " commented on your post.";
+                if(post !=null && post.getParentPost() != null)
+                    return senderUsername + "replied to your comment.";
+                else
+                    return senderUsername + "commented on your post.";
             default:
                 return "You have a new notification.";
         }
