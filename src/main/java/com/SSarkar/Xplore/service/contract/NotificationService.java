@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface NotificationService {
 
-    void createNotification(User sender, User recipient, NotificationType type, UUID relatedEntityUuid);
+    void createNotification(User sender, User recipient, NotificationType type, UUID relatedEntityUuid,String comment);
 
     void deleteNotifications(UserDetails user);
 

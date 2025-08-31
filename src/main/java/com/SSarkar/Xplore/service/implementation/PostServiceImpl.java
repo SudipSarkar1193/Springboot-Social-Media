@@ -169,7 +169,7 @@ public class PostServiceImpl implements PostService {
         postRepository.save(parentPost);
 
         //log.info("New comment with UUID: {} added to post with UUID: {}", savedComment.getUuid(), parentPost.getUuid());
-        notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid());
+        notificationService.createNotification(author, parentPost.getAuthor(), NotificationType.POST_COMMENT, parentPost.getUuid(), commentRequest.getContent());
 
         // Calculate depth
         int depth = 0;
@@ -505,7 +505,7 @@ public class PostServiceImpl implements PostService {
         Like newLike = new Like(user, post);
         likeRepository.save(newLike);
         log.info("User {} liked post {}", user.getUsername(), postUuid);
-        notificationService.createNotification(user, post.getAuthor(), NotificationType.POST_LIKE, post.getUuid());
+        notificationService.createNotification(user, post.getAuthor(), NotificationType.POST_LIKE, post.getUuid(),null);
 
         return "Liked the post";
     }

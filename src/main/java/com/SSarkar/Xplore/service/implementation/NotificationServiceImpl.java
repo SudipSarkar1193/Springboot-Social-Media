@@ -39,7 +39,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void createNotification(User sender, User recipient, NotificationType type, UUID relatedEntityUuid) {
+    public void createNotification(User sender, User recipient, NotificationType type, UUID relatedEntityUuid,String comment) {
         // Skipping notifying users about their own actions
         if (sender.getId().equals(recipient.getId())) {
             log.debug("Skipping notification creation for user's own action. User: {}", sender.getUsername());
@@ -58,7 +58,7 @@ public class NotificationServiceImpl implements NotificationService {
             }
             // Send email notification
             try {
-                emailService.sendNotificationEmail(recipient.getEmail(), "New Notification from Xplore", generateMessage(notification), sender.getUsername(),sender.getUserProfile().getProfilePictureUrl(),post == null ? null : post.getContent(),postUrl);
+                emailService.sendNotificationEmail(recipient.getEmail(), "New Notification from Xplore", generateMessage(notification), sender.getUsername(),sender.getUserProfile().getProfilePictureUrl(),comment == null ?(post == null ? null : post.getContent()):comment,postUrl);
             } catch (MessagingException e) {
                 log.error("Failed to send notification email to {}", recipient.getEmail(), e);
             }
