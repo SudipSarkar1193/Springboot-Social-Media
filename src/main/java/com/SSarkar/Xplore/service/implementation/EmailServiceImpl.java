@@ -107,10 +107,11 @@ public class EmailServiceImpl implements EmailService {
         if (hasPostContent) {
             actorMarginBottom = "24px"; // Add margin if there's post content
             postPreviewHtml = String.format("""
-                            
-                            <div class="post-preview">
-                                %s
-                            </div>""", trimmedContent);
+    <div class="post-preview">
+%s
+    </div>
+""", trimmedContent);
+
         }
 
         return String.format("""
@@ -293,6 +294,8 @@ public class EmailServiceImpl implements EmailService {
                     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
                     position: relative;
                     font-size: 15px;
+                    white-space: pre-wrap;   
+                    word-wrap: break-word;   
                 }
                 
                 .post-preview::before {
