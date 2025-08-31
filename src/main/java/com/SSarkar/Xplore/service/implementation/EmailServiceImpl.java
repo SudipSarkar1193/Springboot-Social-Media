@@ -553,9 +553,9 @@ public class EmailServiceImpl implements EmailService {
                         
                         <div class="unsubscribe">
                             <p><strong>Manage your notifications</strong></p>
-                            <p>You're receiving this because you're subscribed to Xplore notifications.<br>
-                            <a href="#preferences">Update notification preferences</a> • 
-                            <a href="#unsubscribe">Unsubscribe</a></p>
+                            <p>You're receiving this because you're subscribed to Xplore notifications.<br> To unsubscribe, you’ll need to change your notification settings.<br>
+                            <a href="https://xplore-v7f1.vercel.app/notifications">Update notification preferences</a> • 
+                            <a href="https://xplore-v7f1.vercel.app/notifications">Unsubscribe</a></p>
                         </div>
                     </div>
                     
