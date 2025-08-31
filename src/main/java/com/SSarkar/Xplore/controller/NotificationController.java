@@ -9,12 +9,10 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -34,6 +32,14 @@ public class NotificationController {
         return ResponseEntity.ok(notifications);
     }
 
+    @DeleteMapping
+    public ResponseEntity<Map<String, String>> deleteAllNotifications(@AuthenticationPrincipal UserDetails currentUserDetails) {
+        notificationService.deleteNotifications(currentUserDetails);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "All notifications have been cleared.");
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/unread-count")
     public ResponseEntity<Map<String, Long>> getUnreadNotificationCount(
             @AuthenticationPrincipal UserDetails currentUserDetails) {
@@ -43,9 +49,9 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/unsubscribe")
-    public ResponseEntity<String> unsubscribe(@RequestParam("token") String token) {
-        notificationService.unsubscribeUser(token);
-        return ResponseEntity.ok("You have been successfully unsubscribed from email notifications.");
-    }
+//    @GetMapping("/unsubscribe")
+//    public ResponseEntity<String> unsubscribe(@RequestParam("token") String token) {
+//        notificationService.unsubscribeUser(token);
+//        return ResponseEntity.ok("You have been successfully unsubscribed from email notifications.");
+//    }
 }

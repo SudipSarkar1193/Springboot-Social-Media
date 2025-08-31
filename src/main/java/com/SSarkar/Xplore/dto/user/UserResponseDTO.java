@@ -16,5 +16,6 @@ public class UserResponseDTO {
     private String fullName;
     private String bio ;
     private boolean isCurrentUserFollowing;
+    private boolean emailNotificationsEnabled;
 
 }

@@ -112,6 +112,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PagedResponseDTO<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable) {
         User currentUser = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userDetails.getUsername()));
@@ -132,6 +133,16 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    @Override
+    @Transactional
+    public void updateEmailNotificationSetting(UserDetails currentUserDetails, boolean enabled) {
+        User user = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + currentUserDetails.getUsername()));
+
+        user.setEmailNotificationsEnabled(enabled);
+        userRepository.save(user);
+    }
+
     UserResponseDTO mapUserToResponse(User user,boolean isFollowing ) {
         UserResponseDTO userResponse = new UserResponseDTO();
         userResponse.setUuid(user.getUuid());
@@ -141,6 +152,7 @@ public class UserServiceImpl implements UserService {
         userResponse.setFollowingCount(userRepository.countFollowing(user));
         userResponse.setPostCount(userRepository.countPosts(user));
         userResponse.setCurrentUserFollowing(isFollowing);
+        userResponse.setEmailNotificationsEnabled(user.isEmailNotificationsEnabled());
 
         if (user.getUserProfile() != null) {
             userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());

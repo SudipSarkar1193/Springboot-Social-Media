@@ -1,19 +1,23 @@
 package com.SSarkar.Xplore.controller;
 
 import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
+import com.SSarkar.Xplore.dto.user.NotificationSettingUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserProfileUpdateDTO;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import com.SSarkar.Xplore.service.contract.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -25,6 +29,18 @@ public class UserController {
     public ResponseEntity<UserResponseDTO> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         UserResponseDTO userResponse = userService.getCurrentUserDetails(userDetails);
         return ResponseEntity.ok(userResponse);
+    }
+
+    @PutMapping("/me/notification-settings")
+    public ResponseEntity<Map<String, String>> updateNotificationSettings(
+            @AuthenticationPrincipal UserDetails currentUserDetails,
+            @RequestBody NotificationSettingUpdateDTO settingUpdateDTO
+    ) {
+        log.debug("request to update notification settings: {}", settingUpdateDTO);
+        userService.updateEmailNotificationSetting(currentUserDetails, settingUpdateDTO.isEnabled());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Notification settings updated successfully.");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/all")

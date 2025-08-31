@@ -41,4 +41,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      * Used for the notification badge count.
      */
     long countByRecipientAndIsReadFalse(User recipient);
+
+
+    /**
+     * Deletes all notifications for a given recipient (user).
+     * This is a bulk operation that is more efficient than fetching and deleting one by one.
+     * @param recipient The user whose notifications should be deleted.
+     */
+    void deleteAllByRecipient(User recipient);
+
 }

@@ -13,9 +13,11 @@ public interface NotificationService {
 
     void createNotification(User sender, User recipient, NotificationType type, UUID relatedEntityUuid);
 
+    void deleteNotifications(UserDetails user);
+
     PagedResponseDTO<NotificationResponseDTO> getNotificationsForUser(UserDetails currentUserDetails, Pageable pageable);
 
     long getUnreadNotificationCount(UserDetails currentUserDetails);
 
-    void unsubscribeUser(String token);
+//    void unsubscribeUser(String token);
 }

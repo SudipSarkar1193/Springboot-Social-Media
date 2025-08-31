@@ -19,4 +19,6 @@ public interface UserService {
     PagedResponseDTO<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, Pageable pageable);
 
     PagedResponseDTO<UserResponseDTO> getAllUsers(UserDetails userDetails, Pageable pageable);
+
+    void updateEmailNotificationSetting(UserDetails currentUserDetails, boolean enabled);
 }

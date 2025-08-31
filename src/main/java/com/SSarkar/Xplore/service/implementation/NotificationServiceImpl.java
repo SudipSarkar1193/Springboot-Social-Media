@@ -3,12 +3,14 @@ package com.SSarkar.Xplore.service.implementation;
 import com.SSarkar.Xplore.dto.notification.NotificationResponseDTO;
 import com.SSarkar.Xplore.dto.post.PagedResponseDTO;
 import com.SSarkar.Xplore.entity.Notification;
-import com.SSarkar.Xplore.entity.UnsubscribeToken;
+import com.SSarkar.Xplore.entity.Post;
+//import com.SSarkar.Xplore.entity.UnsubscribeToken;
 import com.SSarkar.Xplore.entity.User;
 import com.SSarkar.Xplore.entity.enums.NotificationType;
 import com.SSarkar.Xplore.exception.ResourceNotFoundException;
 import com.SSarkar.Xplore.repository.NotificationRepository;
-import com.SSarkar.Xplore.repository.UnsubscribeTokenRepository;
+import com.SSarkar.Xplore.repository.PostRepository;
+//import com.SSarkar.Xplore.repository.UnsubscribeTokenRepository;
 import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.EmailService;
 import com.SSarkar.Xplore.service.contract.NotificationService;
@@ -21,7 +23,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -34,7 +35,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
-    private final UnsubscribeTokenRepository unsubscribeTokenRepository;
+    private final PostRepository postRepository;
+//    private final UnsubscribeTokenRepository unsubscribeTokenRepository;
 
 
     @Override
@@ -51,14 +53,26 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Saved notification of type {} for recipient {} from sender {}", type, recipient.getUsername(), sender.getUsername());
 
         if (recipient.isEmailNotificationsEnabled()) {
-            UnsubscribeToken unsubscribeToken = new UnsubscribeToken(recipient);
-            unsubscribeTokenRepository.save(unsubscribeToken);
+            Post post = postRepository.findByUuid(relatedEntityUuid).orElse(null);
+            String postUrl = null ;
+            if(post != null){
+                postUrl = "https://xplore-v7f1.vercel.app/post/" + post.getUuid().toString();
+            }
+            // Send email notification
             try {
-                emailService.sendNotificationEmail(recipient.getEmail(), "New Notification from Xplore", generateMessage(notification), unsubscribeToken.getToken());
+                emailService.sendNotificationEmail(recipient.getEmail(), "New Notification from Xplore", generateMessage(notification), sender.getUsername(),sender.getUserProfile().getProfilePictureUrl(),post == null ? null : post.getContent(),postUrl);
             } catch (MessagingException e) {
                 log.error("Failed to send notification email to {}", recipient.getEmail(), e);
             }
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteNotifications(UserDetails currentUserDetails) {
+        User recipient = findUserByDetails(currentUserDetails);
+        notificationRepository.deleteAllByRecipient(recipient);
+        log.info("Deleted all notifications for user {}", recipient.getUsername());
     }
 
 
@@ -105,22 +119,22 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.countByRecipientAndIsReadFalse(recipient);
     }
 
-    @Override
-    @Transactional
-    public void unsubscribeUser(String token) {
-        UnsubscribeToken unsubscribeToken = unsubscribeTokenRepository.findByToken(token)
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid unsubscribe token"));
-
-        if (unsubscribeToken.getExpiryDate().isBefore(Instant.now())) {
-            throw new ResourceNotFoundException("Unsubscribe token has expired");
-        }
-
-        User user = unsubscribeToken.getUser();
-        user.setEmailNotificationsEnabled(false);
-        userRepository.save(user);
-
-        unsubscribeTokenRepository.delete(unsubscribeToken);
-    }
+//    @Override
+//    @Transactional
+//    public void unsubscribeUser(String token) {
+//        UnsubscribeToken unsubscribeToken = unsubscribeTokenRepository.findByToken(token)
+//                .orElseThrow(() -> new ResourceNotFoundException("Invalid unsubscribe token"));
+//
+//        if (unsubscribeToken.getExpiryDate().isBefore(Instant.now())) {
+//            throw new ResourceNotFoundException("Unsubscribe token has expired");
+//        }
+//
+//        User user = unsubscribeToken.getUser();
+//        user.setEmailNotificationsEnabled(false);
+//        userRepository.save(user);
+//
+//        unsubscribeTokenRepository.delete(unsubscribeToken);
+//    }
 
     // -- HELPER methos ---
     private User findUserByDetails(UserDetails userDetails) {
