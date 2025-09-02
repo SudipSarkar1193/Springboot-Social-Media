@@ -21,6 +21,12 @@ import java.util.UUID;
 @EqualsAndHashCode(of = "uuid")
 public class Post {
 
+    // Enumeration for Post Types
+    public enum PostType {
+        TEXT_IMAGE,
+        VIDEO_SHORT
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -34,7 +40,16 @@ public class Post {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "post_image_urls", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "image_url", columnDefinition = "TEXT")
-    private List<String> imageUrls = new ArrayList<>();;
+    private List<String> imageUrls = new ArrayList<>();
+
+    // New field for video URL
+    @Column(columnDefinition = "TEXT")
+    private String videoUrl;
+
+    // Field to distinguish post types
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PostType postType = PostType.TEXT_IMAGE; // Default to existing type
 
     @CreationTimestamp
     private Instant createdAt;
@@ -42,7 +57,7 @@ public class Post {
     @UpdateTimestamp
     private Instant updatedAt;
 
-    private long shareCount = 0 ;//DEFAULT val = 0
+    private long shareCount = 0; // DEFAULT val = 0
 
     // --- Relationships ---
 
@@ -55,27 +70,14 @@ public class Post {
     @ToString.Exclude
     private List<Like> likes = new ArrayList<>();
 
-    /**
-     * This is the parent post that this post is a comment on.
-     * It's a Many-to-One relationship because many comments (posts) can belong to one parent post.
-     * It can be null if the post is a top-level post, not a comment.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_post_id") // The foreign key column in the 'posts' table
+    @JoinColumn(name = "parent_post_id")
     @ToString.Exclude
     private Post parentPost;
 
-    /**
-     * This is the list of comments on this post.
-     * It's a One-to-Many relationship because one post can have many comments (which are also posts).
-     * `mappedBy = "parentPost"` tells JPA that the `parentPost` field in the child `Post` entity owns this relationship.
-     * `cascade = CascadeType.ALL` means if we delete a post, all its comments are also deleted.
-     * `orphanRemoval = true` ensures that if a comment is removed from this list, it's also deleted from the database.
-     */
     @OneToMany(mappedBy = "parentPost", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Post> comments = new ArrayList<>();
-
 
     // --- Helper Methods for Bidirectional Consistency ---
 
@@ -88,7 +90,4 @@ public class Post {
         comments.remove(comment);
         comment.setParentPost(null);
     }
-
-    //Going to add this if needed later ...
-    //private int depth = -1 ; // 0 for top-level posts, 1 for comments, etc... if not computed yet, -1
 }
