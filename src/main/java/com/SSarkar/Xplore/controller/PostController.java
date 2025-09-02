@@ -15,10 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -27,19 +24,6 @@ import java.util.UUID;
 public class PostController {
 
     private final PostService postService;
-
-//    @PostMapping
-//    public ResponseEntity<PostResponseDTO> createPost(
-//            @Valid @RequestBody CreatePostRequestDTO createPostRequest,
-//            @AuthenticationPrincipal UserDetails currentUser) {
-//
-//        log.info("Creating post for user: {}", currentUser.getUsername());
-//        log.debug("Post creation request: {}", createPostRequest);
-//
-//
-//        PostResponseDTO newPost = postService.createPost(createPostRequest, currentUser);
-//        return new ResponseEntity<>(newPost, HttpStatus.CREATED);
-//    }
 
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<PostResponseDTO> createPost(
@@ -124,13 +108,21 @@ public class PostController {
         return ResponseEntity.ok(map);
     }
 
-    @PostMapping("/{parentPostUuid}/comments")
-    public ResponseEntity<PostResponseDTO> createComment(
+    @PostMapping(value = "/{parentPostUuid}/comments", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<Object> createComment(
             @PathVariable UUID parentPostUuid,
-            @Valid @RequestBody CommentRequestDTO commentRequest,
+            @RequestPart("commentRequest") @Valid CommentRequestDTO commentRequest,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails currentUser) {
-        PostResponseDTO newComment = postService.addCommentToPost(parentPostUuid, commentRequest, currentUser);
-        return new ResponseEntity<>(newComment, HttpStatus.CREATED);
+        try{
+            PostResponseDTO newComment = postService.addCommentToPost(parentPostUuid, commentRequest, images, currentUser);
+            return new ResponseEntity<>(newComment, HttpStatus.CREATED);
+        } catch (Exception e) {
+            String errorMsg = "Error creating comment: " + e.getMessage();
+            Map<String,String> errorResponse = new HashMap<>();
+            errorResponse.put("error", errorMsg);
+            return new ResponseEntity<>(errorResponse,HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("/user/{uuid}")

@@ -24,7 +24,7 @@ public interface PostService {
 
     void updatePost(UserDetails currentUser , UUID postUuid, PostUpdateDTO postUpdateDTO);
 
-    PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUser);
+    public PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, List<MultipartFile> images, UserDetails currentUserDetails);
 
     PagedResponseDTO<PostResponseDTO> getPostsByUser(UUID userUuid, Pageable pageable, UserDetails currentUser);
 

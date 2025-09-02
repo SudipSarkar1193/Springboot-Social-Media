@@ -125,7 +125,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
-    public PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, UserDetails currentUserDetails) {
+    public PostResponseDTO addCommentToPost(UUID parentPostUuid, CommentRequestDTO commentRequest, List<MultipartFile> images, UserDetails currentUserDetails) {
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Post parentPost = postRepository.findByUuid(parentPostUuid)
@@ -134,24 +134,21 @@ public class PostServiceImpl implements PostService {
         Post comment = new Post();
         comment.setContent(commentRequest.getContent());
         comment.setAuthor(author);
-        if (commentRequest.getImageUrls() != null && !commentRequest.getImageUrls().isEmpty()) {
 
+        // Logic to handle MultipartFile images
+        if (images != null && !images.isEmpty()) {
             List<String> urls = new ArrayList<>();
-
-            for(String base64ImgString : commentRequest.getImageUrls()) {
-                String imgUrl = null;
+            for (MultipartFile file : images) {
                 try {
-                    imgUrl = cloudinaryService.upload(base64ImgString);
+                    String imgUrl = cloudinaryService.upload(file.getBytes());
+                    if (imgUrl != null) {
+                        urls.add(imgUrl);
+                    }
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                if (imgUrl != null) {
-                    urls.add(imgUrl);
-                } else {
-                    log.warn("Failed to upload image, skipping: {}", base64ImgString);
+                    log.error("Failed to upload comment image", e);
+                    throw new RuntimeException("Failed to upload comment image",e);
                 }
             }
-
             comment.setImageUrls(urls);
         }
 

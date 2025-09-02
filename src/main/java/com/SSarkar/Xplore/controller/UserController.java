@@ -9,10 +9,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -80,15 +82,14 @@ public class UserController {
     }
 
 
-    @PutMapping("/update")
+    @PutMapping(value = "/update", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<Object> updateUserProfile(
             @AuthenticationPrincipal UserDetails currentUserDetails,
-            @Valid @RequestBody UserProfileUpdateDTO updateDTO
+            @RequestPart("userProfileUpdateDTO") UserProfileUpdateDTO updateDTO,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
     ) {
-        log.info("------------->>>>>>>> {}",updateDTO);
-        log.info("------------->>>>>>>> {}",updateDTO.toString());
         try{
-            UserResponseDTO updatedUser = userService.updateUserProfile(currentUserDetails, updateDTO);
+            UserResponseDTO updatedUser = userService.updateUserProfile(currentUserDetails, updateDTO, profileImage);
             return ResponseEntity.ok(updatedUser);
         }catch (Exception e){
             log.error("Error updating user profile", e);

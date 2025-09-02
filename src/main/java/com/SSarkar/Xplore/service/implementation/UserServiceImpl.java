@@ -19,6 +19,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,7 +54,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDTO updateUserProfile(UserDetails currentUserDetails, UserProfileUpdateDTO updateDTO) {
+    public UserResponseDTO updateUserProfile(UserDetails currentUserDetails, UserProfileUpdateDTO updateDTO, MultipartFile profileImage) {
 
         log.debug("UserProfileUpdateDTO {}",updateDTO.toString());
 
@@ -84,14 +85,15 @@ public class UserServiceImpl implements UserService {
         if (updateDTO.getBio() != null) {
             userProfile.setBio(updateDTO.getBio());
         }
-        if (updateDTO.getProfileImageUrl() != null) {
-            String url = null;
+
+
+        if (profileImage != null && !profileImage.isEmpty()) {
             try {
-                url = cloudinaryService.upload(updateDTO.getProfileImageUrl());
+                String url = cloudinaryService.upload(profileImage.getBytes());
+                userProfile.setProfilePictureUrl(url);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Error uploading profile picture", e);
             }
-            userProfile.setProfilePictureUrl(url);
         }
 
         // 4. Save the User entity. Because of the CascadeType.ALL setting on the

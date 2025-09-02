@@ -6,6 +6,7 @@ import com.SSarkar.Xplore.dto.user.UserResponseDTO;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public interface UserService {
 
     UserResponseDTO getUserDetailsByUsername(String username,UserDetails currentUserDetails);
 
-    UserResponseDTO updateUserProfile(UserDetails currentUserDetails, @Valid UserProfileUpdateDTO updateDTO);
+    UserResponseDTO updateUserProfile(UserDetails currentUserDetails, @Valid UserProfileUpdateDTO updateDTO, MultipartFile profileImage);
 
     PagedResponseDTO<UserResponseDTO> getSuggestedUsers(UserDetails userDetails, Pageable pageable);
 
