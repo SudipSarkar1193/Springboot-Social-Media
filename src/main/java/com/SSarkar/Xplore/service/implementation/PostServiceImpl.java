@@ -84,12 +84,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> files, UserDetails currentUserDetails) {
-
-        // --- START OF ADDED LOGGING ---
-        //log.info("RAW DTO received in controller: {}", createPostRequest.toString());
-        log.info("Content from DTO: {}", createPostRequest.getContent());
-        // --- END OF ADDED LOGGING ---
+    public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUserDetails) {
 
         log.info("Creating post for user: {}", currentUserDetails.getUsername());
         log.debug("Post creation request: {}", createPostRequest);
@@ -97,28 +92,47 @@ public class PostServiceImpl implements PostService {
         Post newPost = new Post();
         newPost.setContent(createPostRequest.getContent());
 
-        if (files != null && !files.isEmpty()) {
+        User author = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
+
+        // logic to handle MultipartFile images and video
+        if (video != null && !video.isEmpty()) {
+            // This is a VIDEO_SHORT
+            newPost.setPostType(Post.PostType.VIDEO_SHORT);
+            try {
+                String videoUrl = cloudinaryService.uploadVideo(video.getBytes());
+                newPost.setVideoUrl(videoUrl);
+            } catch (IOException e) {
+                log.error("Error uploading video to Cloudinary!", e);
+                throw new RuntimeException("Failed to upload video", e);
+            }
+        } else if (images != null && !images.isEmpty()) {
+            // This is a TEXT_IMAGE (post with images)
+            newPost.setPostType(Post.PostType.TEXT_IMAGE);
             List<String> imgUrls = new ArrayList<>();
-            for (MultipartFile file : files) {
+            for (MultipartFile file : images) {
                 try {
                     String imgUrl = cloudinaryService.upload(file.getBytes());
                     if (imgUrl != null) {
                         imgUrls.add(imgUrl);
                     }
                 } catch (IOException e) {
-                    log.error("Error uploading image to Cloudinary !!!", e);
+                    log.error("Error uploading image to Cloudinary!", e);
                     throw new RuntimeException("Failed to upload image", e);
                 }
             }
             newPost.setImageUrls(imgUrls);
+        } else {
+            // This is a text-only post
+            newPost.setPostType(Post.PostType.TEXT_IMAGE);
         }
-        User author = userRepository.findByUsername(currentUserDetails.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
+
         author.addPost(newPost);
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
 
-        PostResponseDTO response = mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet());
+        // Mapping to DTO
+        PostResponseDTO response = mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet(), Collections.emptyMap());
         response.setDepth(0); // Manually set depth to 0 for a new post
         return response;
     }
@@ -584,11 +598,14 @@ public class PostServiceImpl implements PostService {
         if (post == null) return null;
 
         PostResponseDTO dto = new PostResponseDTO();
+
         dto.setPostUuid(post.getUuid());
         dto.setContent(post.getContent());
+        dto.setImageUrls(post.getImageUrls());
+        dto.setVideoUrl(post.getVideoUrl());
+        dto.setPostType(PostResponseDTO.PostType.valueOf(post.getPostType().name()));
         dto.setCreatedAt(post.getCreatedAt());
         dto.setUpdatedAt(post.getUpdatedAt());
-        dto.setImageUrls(post.getImageUrls());
         dto.setAuthorUsername(post.getAuthor().getUsername());
         dto.setAuthorUuid(post.getAuthor().getUuid());
         dto.setShareCount(post.getShareCount());
@@ -609,9 +626,10 @@ public class PostServiceImpl implements PostService {
             dto.setParentPostUuid(post.getParentPost().getUuid());
         }
 
-        List<Post> commentList = post.getComments();
         dto.setCommentCount(countNestedComments(post));
 
+
+        List<Post> commentList = post.getComments();
         if (recursionDepth > 0 && commentList != null && !commentList.isEmpty()) {
             List<PostResponseDTO> commentDTOs = new ArrayList<>();
             for (Post comment : commentList) {

@@ -29,16 +29,22 @@ public class PostController {
     public ResponseEntity<PostResponseDTO> createPost(
             @RequestPart("content") String content,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "video", required = false) MultipartFile video,
             @AuthenticationPrincipal UserDetails currentUser) {
 
         log.info("Creating post for user: {}", currentUser.getUsername());
-        log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
+        if (images != null) {
+            log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
+        }
+        if (video != null) {
+            log.debug("Post creation video RequestPart: {}", video.getOriginalFilename());
+        }
 
         CreatePostRequestDTO createPostRequest = new CreatePostRequestDTO();
         createPostRequest.setContent(content);
 
 
-        PostResponseDTO newPost = postService.createPost(createPostRequest, images, currentUser);
+        PostResponseDTO newPost = postService.createPost(createPostRequest, images, video, currentUser);
         return new ResponseEntity<>(newPost, HttpStatus.CREATED);
     }
 

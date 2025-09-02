@@ -43,12 +43,12 @@ public class Post {
     private List<String> imageUrls = new ArrayList<>();
 
     // New field for video URL
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "video_url",columnDefinition = "TEXT")
     private String videoUrl;
 
     // Field to distinguish post types
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name="post_type",nullable = false)
     private PostType postType = PostType.TEXT_IMAGE; // Default to existing type
 
     @CreationTimestamp
