@@ -8,12 +8,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -24,16 +28,33 @@ public class PostController {
 
     private final PostService postService;
 
-    @PostMapping
+//    @PostMapping
+//    public ResponseEntity<PostResponseDTO> createPost(
+//            @Valid @RequestBody CreatePostRequestDTO createPostRequest,
+//            @AuthenticationPrincipal UserDetails currentUser) {
+//
+//        log.info("Creating post for user: {}", currentUser.getUsername());
+//        log.debug("Post creation request: {}", createPostRequest);
+//
+//
+//        PostResponseDTO newPost = postService.createPost(createPostRequest, currentUser);
+//        return new ResponseEntity<>(newPost, HttpStatus.CREATED);
+//    }
+
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<PostResponseDTO> createPost(
-            @Valid @RequestBody CreatePostRequestDTO createPostRequest,
+            @RequestPart("content") String content,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails currentUser) {
 
         log.info("Creating post for user: {}", currentUser.getUsername());
-        log.debug("Post creation request: {}", createPostRequest);
+        log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
+
+        CreatePostRequestDTO createPostRequest = new CreatePostRequestDTO();
+        createPostRequest.setContent(content);
 
 
-        PostResponseDTO newPost = postService.createPost(createPostRequest, currentUser);
+        PostResponseDTO newPost = postService.createPost(createPostRequest, images, currentUser);
         return new ResponseEntity<>(newPost, HttpStatus.CREATED);
     }
 

@@ -22,6 +22,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -82,7 +83,8 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, UserDetails currentUserDetails) {
+    @Override
+     public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> files, UserDetails currentUserDetails) {
 
         // --- START OF ADDED LOGGING ---
         //log.info("RAW DTO received in controller: {}", createPostRequest.toString());
@@ -92,34 +94,26 @@ public class PostServiceImpl implements PostService {
         log.info("Creating post for user: {}", currentUserDetails.getUsername());
         log.debug("Post creation request: {}", createPostRequest);
 
-        User author = userRepository.findByUsername(currentUserDetails.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
-
         Post newPost = new Post();
         newPost.setContent(createPostRequest.getContent());
-        if (createPostRequest.getImageUrls() != null && !createPostRequest.getImageUrls().isEmpty()) {
+
+        if (files != null && !files.isEmpty()) {
             List<String> imgUrls = new ArrayList<>();
-
-            for(String base64ImgString : createPostRequest.getImageUrls()) {
-                String imgUrl = null;
+            for (MultipartFile file : files) {
                 try {
-                    imgUrl = cloudinaryService.upload(base64ImgString);
+                    String imgUrl = cloudinaryService.upload(file.getBytes());
+                    if (imgUrl != null) {
+                        imgUrls.add(imgUrl);
+                    }
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                if (imgUrl != null) {
-                    imgUrls.add(imgUrl);
-                } else {
-                    log.warn("Failed to upload image, skipping: {}", base64ImgString);
+                    log.error("Error uploading image to Cloudinary !!!", e);
+                    throw new RuntimeException("Failed to upload image", e);
                 }
             }
-
-            if (!imgUrls.isEmpty()) {
-                newPost.setImageUrls(imgUrls);
-            } else {
-                log.warn("No valid image URLs provided, post will be created without images.");
-            }
+            newPost.setImageUrls(imgUrls);
         }
+        User author = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
         author.addPost(newPost);
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
