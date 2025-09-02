@@ -22,6 +22,13 @@ public class CloudinaryServiceImpl implements CloudinaryService {
     }
 
     @Override
+    // Overloaded method to upload raw byte data
+    public String upload(byte[] data) throws IOException {
+        Map<?, ?> uploadResult = cloudinary.uploader().upload(data, ObjectUtils.emptyMap());
+        return (String) uploadResult.get("secure_url");
+    }
+
+    @Override
     public void delete(String imageUrl) throws IOException {
         // Extract the public ID from the URL
         String publicId = imageUrl.substring(imageUrl.lastIndexOf("/") + 1, imageUrl.lastIndexOf("."));
