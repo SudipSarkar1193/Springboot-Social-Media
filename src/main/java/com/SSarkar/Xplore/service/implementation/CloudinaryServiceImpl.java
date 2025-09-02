@@ -29,6 +29,15 @@ public class CloudinaryServiceImpl implements CloudinaryService {
     }
 
     @Override
+    public String uploadVideo(byte[] data) throws IOException {
+        // We tell Cloudinary to treat this as a video file
+        Map<?, ?> uploadResult = cloudinary.uploader().upload(data, ObjectUtils.asMap(
+                "resource_type", "video"
+        ));
+        return (String) uploadResult.get("secure_url");
+    }
+
+    @Override
     public void delete(String imageUrl) throws IOException {
         // Extract the public ID from the URL
         String publicId = imageUrl.substring(imageUrl.lastIndexOf("/") + 1, imageUrl.lastIndexOf("."));
