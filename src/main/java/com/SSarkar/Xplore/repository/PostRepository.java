@@ -65,8 +65,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * window check to a parameter (`:yesterday`) for better portability across databases.
      */
     @Query("""
-
-            SELECT p.uuid 
+    SELECT p.uuid 
     FROM Post p 
     WHERE p.parentPost IS NULL AND p.postType = 'TEXT_IMAGE'
     ORDER BY 

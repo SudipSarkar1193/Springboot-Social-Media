@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -50,7 +51,7 @@ public class PostController {
 
     @GetMapping("/feed")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
-            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
             @AuthenticationPrincipal UserDetails currentUser) {
         PagedResponseDTO<PostResponseDTO> posts = postService.getFeedPosts(pageable, currentUser);
         return ResponseEntity.ok(posts);
@@ -58,7 +59,7 @@ public class PostController {
 
     @GetMapping("/following")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getFollowingPosts(
-            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt",direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal UserDetails currentUser
     ){
         log.info("Following posts request: {}", currentUser.getUsername());
@@ -134,7 +135,7 @@ public class PostController {
     @GetMapping("/user/{uuid}")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getUserPosts(
             @PathVariable UUID uuid,
-            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt",direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal UserDetails currentUser
     ) {
         PagedResponseDTO<PostResponseDTO> posts = postService.getPostsByUser(uuid, pageable, currentUser);
@@ -144,7 +145,7 @@ public class PostController {
     @GetMapping("/likes/{uuid}")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getLikedPosts(
             @PathVariable UUID uuid,
-            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable
+            @PageableDefault(size = 10, page = 0, sort = "createdAt",direction = Sort.Direction.DESC) Pageable pageable
     ) {
         PagedResponseDTO<PostResponseDTO> posts = postService.getLikedPostsByUser(uuid, pageable);
         return ResponseEntity.ok(posts);
@@ -152,7 +153,7 @@ public class PostController {
 
     @GetMapping("/shorts")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getShorts(
-            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @PageableDefault(size = 10, page = 0, sort = "createdAt",direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal UserDetails currentUser) {
         PagedResponseDTO<PostResponseDTO> posts = postService.getAllShorts(pageable, currentUser);
         return ResponseEntity.ok(posts);
