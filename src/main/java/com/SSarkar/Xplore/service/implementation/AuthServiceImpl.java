@@ -104,6 +104,7 @@ public class AuthServiceImpl implements AuthService {
                         ? savedUser.getUserProfile().getProfilePictureUrl()
                         : null
         );
+        userResponse.setCreatedAt(savedUser.getCreatedAt());
 
         return userResponse;
     }

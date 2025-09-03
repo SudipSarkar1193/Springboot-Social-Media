@@ -1,6 +1,9 @@
 package com.SSarkar.Xplore.dto.user;
 
 import lombok.Data;
+
+import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 @Data
@@ -17,5 +20,6 @@ public class UserResponseDTO {
     private String bio ;
     private boolean isCurrentUserFollowing;
     private boolean emailNotificationsEnabled;
+    private Instant createdAt;
 
 }

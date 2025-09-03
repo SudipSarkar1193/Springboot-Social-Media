@@ -167,6 +167,7 @@ public class UserServiceImpl implements UserService {
         userResponse.setPostCount(userRepository.countPosts(user));
         userResponse.setCurrentUserFollowing(isFollowing);
         userResponse.setEmailNotificationsEnabled(user.isEmailNotificationsEnabled());
+        userResponse.setCreatedAt(user.getCreatedAt());
 
         if (user.getUserProfile() != null) {
             userResponse.setProfilePictureUrl(user.getUserProfile().getProfilePictureUrl());
