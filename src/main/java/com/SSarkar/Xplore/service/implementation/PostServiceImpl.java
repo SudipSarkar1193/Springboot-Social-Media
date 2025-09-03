@@ -90,9 +90,7 @@ public class PostServiceImpl implements PostService {
         log.debug("Post creation request: {}", createPostRequest);
 
         Post newPost = new Post();
-        if(createPostRequest.getContent()!=null && createPostRequest.getContent().equals("")){
-            newPost.setContent(createPostRequest.getContent());
-        }
+        newPost.setContent(createPostRequest.getContent());
 
 
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
