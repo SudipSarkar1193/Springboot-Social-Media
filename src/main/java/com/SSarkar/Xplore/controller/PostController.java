@@ -28,7 +28,7 @@ public class PostController {
 
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<PostResponseDTO> createPost(
-            @RequestPart("content") String content,
+            @RequestPart(value = "content", required = false) String content,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @RequestPart(value = "video", required = false) MultipartFile video,
             @AuthenticationPrincipal UserDetails currentUser) {

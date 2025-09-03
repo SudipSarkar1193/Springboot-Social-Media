@@ -90,7 +90,10 @@ public class PostServiceImpl implements PostService {
         log.debug("Post creation request: {}", createPostRequest);
 
         Post newPost = new Post();
-        newPost.setContent(createPostRequest.getContent());
+        if(createPostRequest.getContent()!=null && createPostRequest.getContent().equals("")){
+            newPost.setContent(createPostRequest.getContent());
+        }
+
 
         User author = userRepository.findByUsername(currentUserDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
@@ -100,7 +103,7 @@ public class PostServiceImpl implements PostService {
             // This is a VIDEO_SHORT
             newPost.setPostType(Post.PostType.VIDEO_SHORT);
             try {
-                String videoUrl = cloudinaryService.uploadVideo(video.getBytes());
+                String videoUrl = cloudinaryService.uploadVideo(video.getInputStream());
                 newPost.setVideoUrl(videoUrl);
             } catch (IOException e) {
                 log.error("Error uploading video to Cloudinary!", e);
@@ -112,7 +115,7 @@ public class PostServiceImpl implements PostService {
             List<String> imgUrls = new ArrayList<>();
             for (MultipartFile file : images) {
                 try {
-                    String imgUrl = cloudinaryService.upload(file.getBytes());
+                    String imgUrl = cloudinaryService.upload(file.getInputStream());
                     if (imgUrl != null) {
                         imgUrls.add(imgUrl);
                     }
@@ -154,7 +157,7 @@ public class PostServiceImpl implements PostService {
             List<String> urls = new ArrayList<>();
             for (MultipartFile file : images) {
                 try {
-                    String imgUrl = cloudinaryService.upload(file.getBytes());
+                    String imgUrl = cloudinaryService.upload(file.getInputStream());
                     if (imgUrl != null) {
                         urls.add(imgUrl);
                     }
