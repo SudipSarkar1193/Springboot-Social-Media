@@ -150,5 +150,13 @@ public class PostController {
         return ResponseEntity.ok(posts);
     }
 
+    @GetMapping("/shorts")
+    public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getShorts(
+            @PageableDefault(size = 10, page = 0, sort = "createdAt") Pageable pageable,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        PagedResponseDTO<PostResponseDTO> posts = postService.getAllShorts(pageable, currentUser);
+        return ResponseEntity.ok(posts);
+    }
+
 
 }

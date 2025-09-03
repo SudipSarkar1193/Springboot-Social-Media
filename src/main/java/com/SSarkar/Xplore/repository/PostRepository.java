@@ -68,7 +68,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
             SELECT p.uuid 
     FROM Post p 
-    WHERE p.parentPost IS NULL 
+    WHERE p.parentPost IS NULL AND p.postType = 'TEXT_IMAGE'
     ORDER BY 
         CASE 
             WHEN p.author IN (
@@ -99,5 +99,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     """)
     Page<Post> findPostsByFollowing(@Param("currentUserUuid") UUID currentUserUuid, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"author", "comments"})
+    Page<Post> findAllByPostType(Post.PostType postType, Pageable pageable);
 
 }

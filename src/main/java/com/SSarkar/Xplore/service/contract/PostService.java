@@ -36,4 +36,6 @@ public interface PostService {
 
     String increaseShareCount(UUID postUuid);
 
+    PagedResponseDTO<PostResponseDTO> getAllShorts(Pageable pageable, UserDetails currentUser);
+
 }

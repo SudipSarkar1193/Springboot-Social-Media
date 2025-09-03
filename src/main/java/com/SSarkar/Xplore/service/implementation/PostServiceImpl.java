@@ -584,6 +584,40 @@ public class PostServiceImpl implements PostService {
         return "incremented shareCount to " + post.getShareCount();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponseDTO<PostResponseDTO> getAllShorts(Pageable pageable, UserDetails currentUserDetails) {
+        Page<Post> postPage = postRepository.findAllByPostType(Post.PostType.VIDEO_SHORT, pageable);
+        log.debug("Fetched {} shorts from page {}", postPage.getNumberOfElements(), pageable.getPageNumber());
+
+        User currentUser = getCurrentUserOrNull(currentUserDetails);
+        List<Post> posts = postPage.getContent();
+
+        Map<UUID, Long> likeCounts = postRepository.countLikesForPosts(posts).stream()
+                .collect(Collectors.toMap(
+                        result -> (UUID) result.get("postUuid"),
+                        result -> (Long) result.get("likeCount")));
+
+        Set<UUID> likedPostUuids = (currentUser != null)
+                ? likeRepository.findLikedPostUuidsByUserAndPosts(currentUser, posts)
+                : Collections.emptySet();
+
+        Map<UUID, Integer> postDepthMap = new HashMap<>();
+        computeAndStoreDepths(posts, postDepthMap);
+
+        List<PostResponseDTO> postResponseDTOList = posts.stream()
+                .map(post -> mapPostToResponseDTO(post, currentUser, 1, likeCounts, likedPostUuids,postDepthMap))
+                .collect(Collectors.toList());
+
+        return new PagedResponseDTO<>(
+                postResponseDTOList,
+                postPage.getNumber(),
+                postPage.getTotalPages(),
+                postPage.getTotalElements(),
+                postPage.isLast()
+        );
+    }
+
     // --- HELPER METHODS ---
 
     private User getCurrentUserOrNull(UserDetails userDetails) {
