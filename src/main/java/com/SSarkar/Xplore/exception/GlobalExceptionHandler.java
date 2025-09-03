@@ -87,4 +87,23 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
+
+    /**
+     * Handles all other uncaught exceptions. This is a "catch-all" handler.
+     * It prevents the application from crashing and provides a generic, user-friendly
+     * error message, while logging the detailed error for developers.
+     */
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<ErrorResponseDTO> handleAllUncaughtException(Exception ex, WebRequest request) {
+        log.error("An unexpected error occurred", ex);
+
+        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                "An unexpected server error occurred. Please try again later."
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
