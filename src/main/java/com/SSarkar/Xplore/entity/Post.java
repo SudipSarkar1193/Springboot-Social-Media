@@ -37,6 +37,9 @@ public class Post {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "depth")
+    private Integer depth;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "post_image_urls", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "image_url", columnDefinition = "TEXT")
