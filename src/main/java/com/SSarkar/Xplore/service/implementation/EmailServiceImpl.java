@@ -1,54 +1,63 @@
 package com.SSarkar.Xplore.service.implementation;
 
+import brevoApi.TransactionalEmailsApi;
+import brevoModel.SendSmtpEmail;
+import brevoModel.SendSmtpEmailSender;
+import brevoModel.SendSmtpEmailTo;
 import com.SSarkar.Xplore.service.contract.EmailService;
 import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Year;
-import java.util.concurrent.CompletableFuture;
+import java.util.Collections;
 
-/**
- * Implementation of the EmailService interface for sending emails.
- * Uses JavaMailSender for email delivery with enhanced error handling.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
     private static final String OTP_EMAIL_SUBJECT = "Your OTP for Xplore Registration";
-    private static final int MAX_POST_CONTENT_LENGTH = 150;
     private static final String DEFAULT_AVATAR_URL = "https://res.cloudinary.com/dvsutdpx2/image/upload/v1732181213/ryi6ouf4e0mwcgz1tcxx.png";
+    private static final int MAX_POST_CONTENT_LENGTH = 150;
+    private final TransactionalEmailsApi transactionalEmailsApi;
 
-    private final JavaMailSender javaMailSender;
-
-    @Value("${spring.mail.from}")
+    @Value("${brevo.sender.email}")
     private String fromEmail;
+
+    @Value("${brevo.sender.name}")
+    private String fromName;
 
     @Override
     public void sendOtpEmail(String to, String otp) throws MessagingException {
+        if (!StringUtils.hasText(to)) {
+            log.error("Recipient email is empty");
+            return;
+        }
+
+        SendSmtpEmailSender sender = new SendSmtpEmailSender()
+                .email(fromEmail)
+                .name(fromName);
+
+        SendSmtpEmailTo recipient = new SendSmtpEmailTo()
+                .email(to);
+
+        SendSmtpEmail email = new SendSmtpEmail()
+                .sender(sender)
+                .to(Collections.singletonList(recipient))
+                .subject(OTP_EMAIL_SUBJECT)
+                .htmlContent(buildOtpEmailContent(otp));
+
         try {
-            MimeMessage message = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject(OTP_EMAIL_SUBJECT);
-            helper.setText(buildOtpEmailContent(otp), true);
-
-            javaMailSender.send(message);
-            log.info("OTP email sent successfully to: {}", to);
-        } catch (MessagingException e) {
-            log.error("Failed to send OTP email to: {}", to, e);
-            throw e;
+            transactionalEmailsApi.sendTransacEmail(email);
+            log.info("OTP email sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to {} via Brevo API: {}", to, e.getMessage(), e);
+            throw new MessagingException("Failed to send email via Brevo API", e);
         }
     }
 
@@ -56,32 +65,31 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendNotificationEmail(String to, String subject, String message,
                                       String actorName, String actorProfilePicUrl,
-                                      String postContent, String postUrl) throws MessagingException {
+                                      String postContent, String postUrl) {
+        if (!StringUtils.hasText(to) || !StringUtils.hasText(subject)) {
+            log.error("Invalid email parameters: to={}, subject={}", to, subject);
+            return;
+        }
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                // Validate inputs
-                if (!StringUtils.hasText(to) || !StringUtils.hasText(subject)) {
-                    log.error("Invalid email parameters: to={}, subject={}", to, subject);
-                    return;
-                }
+        SendSmtpEmailSender sender = new SendSmtpEmailSender()
+                .email(fromEmail)
+                .name(fromName);
 
-                MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+        SendSmtpEmailTo recipient = new SendSmtpEmailTo()
+                .email(to);
 
-                helper.setFrom(fromEmail);
-                helper.setTo(to);
-                helper.setSubject(subject);
-                helper.setText(buildNotificationEmailContent(
-                        message, actorName, actorProfilePicUrl, postContent, postUrl), true);
+        SendSmtpEmail email = new SendSmtpEmail()
+                .sender(sender)
+                .to(Collections.singletonList(recipient))
+                .subject(subject)
+                .htmlContent(buildNotificationEmailContent(message, actorName, actorProfilePicUrl, postContent, postUrl));
 
-                javaMailSender.send(mimeMessage);
-                log.info("Notification email sent successfully to: {} for actor: {}", to, actorName);
-
-            } catch (Exception e) {
-                log.error("Failed to send notification email to: {} for actor: {}", to, actorName, e);
-            }
-        });
+        try {
+            transactionalEmailsApi.sendTransacEmail(email);
+            log.info("Notification email sent successfully to {} for actor {}", to, actorName);
+        } catch (Exception e) {
+            log.error("Failed to send notification email to {} for actor {} via Brevo API: {}", to, actorName, e.getMessage(), e);
+        }
     }
 
     private String buildNotificationEmailContent(String msg, String actorName,
