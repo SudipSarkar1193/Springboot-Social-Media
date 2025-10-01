@@ -46,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
         // 1. Check if email already exists
         if (userRepository.existsByEmail(registrationRequest.getEmail())) {
             log.warn("Registration failed: Email '{}' is already in use", registrationRequest.getEmail());
-            throw new IllegalStateException("Email is already in use");
+            throw new IllegalStateException("The email is already in use");
         }
 
         // 2. Generate a unique username from firstName & lastName

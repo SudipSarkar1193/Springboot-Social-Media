@@ -2,6 +2,7 @@ package com.SSarkar.Xplore.controller;
 
 import com.SSarkar.Xplore.dto.auth.*;
 import com.SSarkar.Xplore.dto.user.UserResponseDTO;
+import com.SSarkar.Xplore.repository.UserRepository;
 import com.SSarkar.Xplore.service.contract.AuthService;
 import com.SSarkar.Xplore.service.contract.EmailService;
 import com.SSarkar.Xplore.service.contract.OtpService;
@@ -26,6 +27,7 @@ public class AuthController {
     private final OtpService otpService;
     private final EmailService emailService;
     private final AuthService authService;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> registerUser(
@@ -33,6 +35,11 @@ public class AuthController {
 
         if (!isValidEmail(registrationRequest.getEmail())) {
             return buildErrorResponse("Invalid email format", HttpStatus.BAD_REQUEST);
+        }
+
+        if (userRepository.existsByEmail(registrationRequest.getEmail())) {
+            log.warn("Registration failed: Email '{}' is already in use", registrationRequest.getEmail());
+            throw new IllegalStateException("The email is already in use");
         }
 
         String otp = otpService.generateAndStoreOtp(registrationRequest.getEmail(), registrationRequest);
