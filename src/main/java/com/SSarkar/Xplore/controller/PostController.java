@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.concurrent.Semaphore;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -26,27 +27,53 @@ public class PostController {
 
     private final PostService postService;
 
+    // To create a lock that only allows one thread at a time.
+    private final Semaphore uploadLock = new Semaphore(1);
+
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<PostResponseDTO> createPost(
-            @RequestPart(value = "content", required = false) String content,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            @RequestPart(value = "video", required = false) MultipartFile video,
-            @AuthenticationPrincipal UserDetails currentUser) {
+    public ResponseEntity<?> createPost( // Change return type to ResponseEntity<?>
+                                         @RequestPart(value = "content", required = false) String content,
+                                         @RequestPart(value = "images", required = false) List<MultipartFile> images,
+                                         @RequestPart(value = "video", required = false) MultipartFile video,
+                                         @AuthenticationPrincipal UserDetails currentUser) {
 
-        log.info("Creating post for user: {}", currentUser.getUsername());
-        if (images != null) {
-            log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
+
+        final long LARGE_UPLOAD_THRESHOLD = 40 * 1024 * 1024;
+        // Check if the upload is for a large video file
+        boolean isLargeUpload = (video != null && !video.isEmpty() && video.getSize() > LARGE_UPLOAD_THRESHOLD);
+
+        if (isLargeUpload) {
+            // Try to acquire the lock without waiting.
+            if (!uploadLock.tryAcquire()) {
+                // If the lock cannot be acquired, it means another large upload is in progress.
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Server is busy processing another large upload. Please try again in a few moments.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.TOO_MANY_REQUESTS);
+            }
         }
-        if (video != null) {
-            log.debug("Post creation video RequestPart: {}", video.getOriginalFilename());
+
+        try {
+            log.info("Creating post for user: {}", currentUser.getUsername());
+            if (images != null) {
+                log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
+            }
+            if (video != null) {
+                log.debug("Post creation video RequestPart: {}", video.getOriginalFilename());
+            }
+
+            CreatePostRequestDTO createPostRequest = new CreatePostRequestDTO();
+            createPostRequest.setContent(content);
+
+            PostResponseDTO newPost = postService.createPost(createPostRequest, images, video, currentUser);
+            return new ResponseEntity<>(newPost, HttpStatus.CREATED);
+
+        } finally {
+            // IMPORTANT: Release the lock in a finally block !!!!!
+            // This ensures the lock is freed EVEN IF the upload fails.
+            if (isLargeUpload) {
+                uploadLock.release();
+            }
         }
-
-        CreatePostRequestDTO createPostRequest = new CreatePostRequestDTO();
-        createPostRequest.setContent(content);
-
-
-        PostResponseDTO newPost = postService.createPost(createPostRequest, images, video, currentUser);
-        return new ResponseEntity<>(newPost, HttpStatus.CREATED);
     }
 
     @GetMapping("/feed")
