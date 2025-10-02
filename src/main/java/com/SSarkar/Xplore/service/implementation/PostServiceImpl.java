@@ -114,6 +114,9 @@ public class PostServiceImpl implements PostService {
         author.addPost(newPost);
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
+
+        // Send a notification to the author confirming the post was created
+        notificationService.createNotification(author, author, NotificationType.POST_CREATED, savedPost.getUuid(), null);
     }
 
     @Override
