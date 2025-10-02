@@ -30,22 +30,42 @@ public class PostController {
     // To create a lock that only allows one thread at a time.
     private final Semaphore uploadLock = new Semaphore(1);
 
-    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<?> createPost( // Change return type to ResponseEntity<?>
-                                         @RequestPart(value = "content", required = false) String content,
-                                         @RequestPart(value = "images", required = false) List<MultipartFile> images,
-                                         @RequestPart(value = "video", required = false) MultipartFile video,
-                                         @AuthenticationPrincipal UserDetails currentUser) {
+    // sudipsarkar1193/springboot-social-media/Springboot-Social-Media-b938c03173fb998f5e3fe77f7fcb91c0c8ed4f13/src/main/java/com/SSarkar/Xplore/controller/PostController.java
 
+
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<?> createPost(
+            @RequestPart(value = "content", required = false) String content,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "video", required = false) MultipartFile video,
+            @AuthenticationPrincipal UserDetails currentUser) {
+
+        // --- Start of New Logging ---
+        log.info("--- PostController: createPost endpoint hit ---");
+        log.info("User: {}", currentUser.getUsername());
+        log.info("Content received: '{}'", content);
+
+        if (images != null && !images.isEmpty()) {
+            log.info("Images received: count={}", images.size());
+        } else {
+            log.info("Images part was null or empty.");
+        }
+
+        if (video != null) {
+            log.info("Video part is NOT NULL. Details: Name='{}', Size={} bytes, IsEmpty={}",
+                    video.getOriginalFilename(), video.getSize(), video.isEmpty());
+        } else {
+            log.info("Video part is NULL.");
+        }
+        log.info("---------------------------------------------");
+        // --- End of New Logging ---
 
         final long LARGE_UPLOAD_THRESHOLD = 40 * 1024 * 1024;
-        // Check if the upload is for a large video file
         boolean isLargeUpload = (video != null && !video.isEmpty() && video.getSize() > LARGE_UPLOAD_THRESHOLD);
 
         if (isLargeUpload) {
-            // Try to acquire the lock without waiting.
             if (!uploadLock.tryAcquire()) {
-                // If the lock cannot be acquired, it means another large upload is in progress.
+                log.warn("Server is busy, rejecting large upload from user: {}", currentUser.getUsername());
                 Map<String, String> errorResponse = new HashMap<>();
                 errorResponse.put("message", "Server is busy processing another large upload. Please try again in a few moments.");
                 return new ResponseEntity<>(errorResponse, HttpStatus.TOO_MANY_REQUESTS);
@@ -53,36 +73,24 @@ public class PostController {
         }
 
         try {
-            log.info("Creating post for user: {}", currentUser.getUsername());
-            System.out.println();
-            System.out.println();
-            System.out.println("Creating post for user: " + currentUser.getUsername());
-            System.out.println();
-            System.out.println();
-            if (images != null) {
-                log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
-            }
-            if (video != null) {
-                log.debug("Post creation video RequestPart: {}", video.getOriginalFilename());
-            }
-
             CreatePostRequestDTO createPostRequest = new CreatePostRequestDTO();
             createPostRequest.setContent(content);
-
             postService.createPost(createPostRequest, images, video, currentUser);
-
             Map<String, String> response = new HashMap<>();
             response.put("message", "Your post is being processed and will be available shortly.");
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
-
-        } finally {
-            // IMPORTANT: Release the lock in a finally block !!!!!
-            // This ensures the lock is freed EVEN IF the upload fails.
+        }catch (Exception e){
+            log.error("Error in createPost controller during post setup", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "An error occurred while preparing your post.");
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }finally {
             if (isLargeUpload) {
                 uploadLock.release();
             }
         }
     }
+
 
     @GetMapping("/feed")
     public ResponseEntity<PagedResponseDTO<PostResponseDTO>> getTopLevelPosts(
