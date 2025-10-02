@@ -17,21 +17,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -70,88 +63,60 @@ public class PostServiceImpl implements PostService {
             postRepository.saveAll(postsToUpdate);
         }
     }
-
-    // This is the main method called by the controller. It's fast.
     @Override
     @Transactional
-    public void createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUserDetails) {
-        User author = userRepository.findByUsername(currentUserDetails.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUserDetails) {
+
+        log.info("Creating post for user: {}", currentUserDetails.getUsername());
+        log.debug("Post creation request: {}", createPostRequest);
 
         Post newPost = new Post();
-        newPost.setAuthor(author);
         newPost.setContent(createPostRequest.getContent());
         newPost.setDepth(0);
 
-        try {
-            if (video != null && !video.isEmpty()) {
-                newPost.setPostType(Post.PostType.VIDEO_SHORT);
+        User author = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
 
-                // 1. Save the file to a temporary location
-                Path tempFile = Files.createTempFile("upload-", video.getOriginalFilename());
-                try (InputStream inputStream = video.getInputStream()) {
-                    Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING);
-                }
-
-                // First save the post with null videoUrl
-                Post savedPost = postRepository.save(newPost);
-
-                // 2. Call the async method with the file path and post ID
-                uploadVideoAndUpdatePost(savedPost.getId(), tempFile.toAbsolutePath().toString());
-
-            } else {
-                // Image and text-only post logic remains synchronous as it's fast
-                newPost.setPostType(Post.PostType.TEXT_IMAGE);
-                if (images != null && !images.isEmpty()) {
-                    List<String> imgUrls = new ArrayList<>();
-                    for (MultipartFile file : images) {
-                        imgUrls.add(cloudinaryService.upload(file.getInputStream()));
-                    }
-                    newPost.setImageUrls(imgUrls);
-                }
-                Post savedPost = postRepository.save(newPost);
-                notificationService.createNotification(author, author, NotificationType.POST_CREATED, savedPost.getUuid(), null);
-            }
-        } catch (IOException e) {
-            log.error("Failed to process post creation", e);
-            throw new RuntimeException("Error processing file.", e);
-        }
-    }
-
-    // This is the new background method. It's slow, but doesn't block the user.
-    @Async
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // Run in a new transaction
-    public void uploadVideoAndUpdatePost(Long postId, String tempFilePath) {
-        log.info("Starting background video upload for post ID: {}", postId);
-        File tempFile = new File(tempFilePath);
-        try {
-            // Find the post created in the main thread
-            Post postToUpdate = postRepository.findById(postId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Post not found for async update"));
-
-            // 3. Upload from the saved temporary file
-            String videoUrl = cloudinaryService.uploadVideo(Files.newInputStream(tempFile.toPath()));
-
-            // 4. Update the post with the Cloudinary URL
-            postToUpdate.setVideoUrl(videoUrl);
-            postRepository.save(postToUpdate);
-
-            log.info("Successfully uploaded video and updated post ID: {}", postId);
-
-            // Send notification after the upload is complete
-            notificationService.createNotification(postToUpdate.getAuthor(), postToUpdate.getAuthor(), NotificationType.POST_CREATED, postToUpdate.getUuid(), null);
-
-        } catch (IOException e) {
-            log.error("Failed async video upload for post ID: {}", postId, e);
-        } finally {
-            // 5. Clean up: Delete the temporary file
+        // logic to handle MultipartFile images and video
+        if (video != null && !video.isEmpty()) {
+            // This is a VIDEO_SHORT
+            newPost.setPostType(Post.PostType.VIDEO_SHORT);
             try {
-                Files.deleteIfExists(tempFile.toPath());
-                log.info("Cleaned up temporary file: {}", tempFilePath);
+                String videoUrl = cloudinaryService.uploadVideo(video.getInputStream());
+                newPost.setVideoUrl(videoUrl);
             } catch (IOException e) {
-                log.error("Failed to delete temporary file: {}", tempFilePath, e);
+                log.error("Error uploading video to Cloudinary!", e);
+                throw new RuntimeException("Failed to upload video", e);
             }
+        } else if (images != null && !images.isEmpty()) {
+            // This is a TEXT_IMAGE (post with images)
+            newPost.setPostType(Post.PostType.TEXT_IMAGE);
+            List<String> imgUrls = new ArrayList<>();
+            for (MultipartFile file : images) {
+                try {
+                    String imgUrl = cloudinaryService.upload(file.getInputStream());
+                    if (imgUrl != null) {
+                        imgUrls.add(imgUrl);
+                    }
+                } catch (IOException e) {
+                    log.error("Error uploading image to Cloudinary!", e);
+                    throw new RuntimeException("Failed to upload image", e);
+                }
+            }
+            newPost.setImageUrls(imgUrls);
+        } else {
+            // This is a text-only post
+            newPost.setPostType(Post.PostType.TEXT_IMAGE);
         }
+
+        author.addPost(newPost);
+        Post savedPost = postRepository.save(newPost);
+        log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
+
+        // Mapping to DTO
+        PostResponseDTO response = mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet());
+        response.setDepth(0); // Manually set depth to 0 for a new post
+        return response;
     }
 
     @Override
