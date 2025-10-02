@@ -163,6 +163,11 @@ public class NotificationServiceImpl implements NotificationService {
                     return senderUsername + " replied to your comment.";
                 else
                     return senderUsername + " commented on your post.";
+
+            case POST_CREATED:
+                return "Your post has been successfully published.";
+
+
             default:
                 return "You have a new notification.";
         }
