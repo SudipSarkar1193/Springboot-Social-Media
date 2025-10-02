@@ -54,6 +54,11 @@ public class PostController {
 
         try {
             log.info("Creating post for user: {}", currentUser.getUsername());
+            System.out.println();
+            System.out.println();
+            System.out.println("Creating post for user: " + currentUser.getUsername());
+            System.out.println();
+            System.out.println();
             if (images != null) {
                 log.debug("Post creation images RequestPart: {}", Arrays.toString(images.toArray()));
             }

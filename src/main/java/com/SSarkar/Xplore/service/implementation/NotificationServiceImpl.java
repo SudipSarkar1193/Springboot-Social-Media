@@ -48,8 +48,14 @@ public class NotificationServiceImpl implements NotificationService {
 
         Notification notification = new Notification(recipient, sender, type, relatedEntityUuid);
         notificationRepository.save(notification);
+
+        System.out.println();
+        System.out.println("Saved notification of type: " + notification.getType());
+        System.out.println();
         log.info("Saved notification of type {} for recipient {} from sender {}", type, recipient.getUsername(), sender.getUsername());
 
+        System.out.println();
+        System.out.println();
         if (recipient.isEmailNotificationsEnabled()) {
             Post post = postRepository.findByUuid(relatedEntityUuid).orElse(null);
             String postUrl = null ;
@@ -118,7 +124,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    // -- HELPER methos ---
+    // -- HELPER methods ---
     private User findUserByDetails(UserDetails userDetails) {
         return userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + userDetails.getUsername()));
@@ -146,28 +152,25 @@ public class NotificationServiceImpl implements NotificationService {
     private String generateMessage(Notification notification) {
         String senderUsername = (notification.getSender() != null) ? notification.getSender().getUsername() : "Someone";
 
-        Post post = null ;
-        if(notification.getRelatedEntityUuid() != null)
+        Post post = null;
+        if (notification.getRelatedEntityUuid() != null)
             post = postRepository.findByUuid(notification.getRelatedEntityUuid()).orElse(null);
 
         switch (notification.getType()) {
             case NEW_FOLLOWER:
                 return senderUsername + " started following you.";
             case POST_LIKE:
-                if(post !=null && post.getParentPost() != null)
+                if (post != null && post.getParentPost() != null)
                     return senderUsername + " liked your comment.";
                 else
                     return senderUsername + " liked your post.";
             case POST_COMMENT:
-                if(post !=null && post.getParentPost() != null)
+                if (post != null && post.getParentPost() != null)
                     return senderUsername + " replied to your comment.";
                 else
                     return senderUsername + " commented on your post.";
-
             case POST_CREATED:
                 return "Your post has been successfully published.";
-
-
             default:
                 return "You have a new notification.";
         }

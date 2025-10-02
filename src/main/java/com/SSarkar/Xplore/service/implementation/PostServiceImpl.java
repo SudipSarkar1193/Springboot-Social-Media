@@ -69,54 +69,69 @@ public class PostServiceImpl implements PostService {
     @Async
     public void createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUserDetails) {
 
+        System.out.println();
+        System.out.println();
         log.info("Creating post for user: {}", currentUserDetails.getUsername());
-        log.debug("Post creation request: {}", createPostRequest);
+        System.out.println("Creating post for user: " + currentUserDetails.getUsername());
+        System.out.println();
+        System.out.println();
+
+        User author = userRepository.findByUsername(currentUserDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
 
         Post newPost = new Post();
         newPost.setContent(createPostRequest.getContent());
         newPost.setDepth(0);
 
-        User author = userRepository.findByUsername(currentUserDetails.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found while creating post"));
+        try {
+            if (video != null && !video.isEmpty()) {
+                // This is a VIDEO_SHORT
+                newPost.setPostType(Post.PostType.VIDEO_SHORT);
 
-        // logic to handle MultipartFile images and video
-        if (video != null && !video.isEmpty()) {
-            // This is a VIDEO_SHORT
-            newPost.setPostType(Post.PostType.VIDEO_SHORT);
-            try {
+                System.out.println();System.out.println();
+                System.out.println("---Uploading video to cloudinary---");
+                System.out.println();
                 String videoUrl = cloudinaryService.uploadVideo(video.getInputStream());
+
+                System.out.println();
+                System.out.println("---Uploaded video to cloudinary---");
+                System.out.println();
                 newPost.setVideoUrl(videoUrl);
-            } catch (IOException e) {
-                log.error("Error uploading video to Cloudinary!", e);
-                throw new RuntimeException("Failed to upload video", e);
-            }
-        } else if (images != null && !images.isEmpty()) {
-            // This is a TEXT_IMAGE (post with images)
-            newPost.setPostType(Post.PostType.TEXT_IMAGE);
-            List<String> imgUrls = new ArrayList<>();
-            for (MultipartFile file : images) {
-                try {
+
+            } else if (images != null && !images.isEmpty()) {
+                // This is a TEXT_IMAGE (post with images)
+                newPost.setPostType(Post.PostType.TEXT_IMAGE);
+                List<String> imgUrls = new ArrayList<>();
+                for (MultipartFile file : images) {
                     String imgUrl = cloudinaryService.upload(file.getInputStream());
                     if (imgUrl != null) {
                         imgUrls.add(imgUrl);
                     }
-                } catch (IOException e) {
-                    log.error("Error uploading image to Cloudinary!", e);
-                    throw new RuntimeException("Failed to upload image", e);
                 }
+                newPost.setImageUrls(imgUrls);
+
+            } else {
+                // This is a text-only post
+                newPost.setPostType(Post.PostType.TEXT_IMAGE);
             }
-            newPost.setImageUrls(imgUrls);
-        } else {
-            // This is a text-only post
-            newPost.setPostType(Post.PostType.TEXT_IMAGE);
+
+            // Save the post and send notification ONLY after all uploads are successful
+            author.addPost(newPost);
+            Post savedPost = postRepository.save(newPost);
+            System.out.println();
+            System.out.println();
+            log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
+            System.out.println();
+            System.out.println("Sending notification");
+            System.out.println();
+            notificationService.createNotification(author, author, NotificationType.POST_CREATED, savedPost.getUuid(), null);
+
+        } catch (IOException e) {
+            log.error("Error uploading media to Cloudinary!", e);
+            // By throwing a runtime exception, the transaction will be rolled back
+            // and the post will not be saved if the upload fails.
+            throw new RuntimeException("Failed to upload media", e);
         }
-
-        author.addPost(newPost);
-        Post savedPost = postRepository.save(newPost);
-        log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
-
-        // Send a notification to the author confirming the post was created
-        notificationService.createNotification(author, author, NotificationType.POST_CREATED, savedPost.getUuid(), null);
     }
 
     @Override
