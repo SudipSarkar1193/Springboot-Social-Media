@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PostService {
-    PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUser);
+    void createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUser);
 
     PagedResponseDTO<PostResponseDTO> getAllTopLevelPosts(Pageable pageable, UserDetails currentUser);
 

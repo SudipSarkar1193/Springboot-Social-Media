@@ -64,8 +64,11 @@ public class PostController {
             CreatePostRequestDTO createPostRequest = new CreatePostRequestDTO();
             createPostRequest.setContent(content);
 
-            PostResponseDTO newPost = postService.createPost(createPostRequest, images, video, currentUser);
-            return new ResponseEntity<>(newPost, HttpStatus.CREATED);
+            postService.createPost(createPostRequest, images, video, currentUser);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Your post is being processed and will be available shortly.");
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
 
         } finally {
             // IMPORTANT: Release the lock in a finally block !!!!!

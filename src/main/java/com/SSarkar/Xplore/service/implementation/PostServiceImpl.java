@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -65,7 +66,8 @@ public class PostServiceImpl implements PostService {
     }
     @Override
     @Transactional
-    public PostResponseDTO createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUserDetails) {
+    @Async
+    public void createPost(CreatePostRequestDTO createPostRequest, List<MultipartFile> images, MultipartFile video, UserDetails currentUserDetails) {
 
         log.info("Creating post for user: {}", currentUserDetails.getUsername());
         log.debug("Post creation request: {}", createPostRequest);
@@ -112,11 +114,6 @@ public class PostServiceImpl implements PostService {
         author.addPost(newPost);
         Post savedPost = postRepository.save(newPost);
         log.info("New post created with UUID: {} by user: {}", savedPost.getUuid(), author.getUsername());
-
-        // Mapping to DTO
-        PostResponseDTO response = mapPostToResponseDTO(savedPost, author, 0, Collections.emptyMap(), Collections.emptySet());
-        response.setDepth(0); // Manually set depth to 0 for a new post
-        return response;
     }
 
     @Override
